@@ -3,7 +3,7 @@ import { transferEvents } from "./lib/events"
 import { getCurrentBlockNumber, getNewHolderInfo } from "./lib/blockchain"
 import { getLastBlockNumber, getHolderMapAt, saveSnapshot, disconnect } from "./lib/storage"
 
-const getIncrementedSnapshot = async (fromBlock: bigint, toBlock: bigint, holderMap: HolderMap): Promise<HolderMap> => {
+const getIncrementedHolderMap = async (fromBlock: bigint, toBlock: bigint, holderMap: HolderMap): Promise<HolderMap> => {
     const events = transferEvents(fromBlock, toBlock)
 
     for await (const event of events) {
@@ -30,7 +30,7 @@ const snapshot = async () => {
 
     const prevHolderMap = await getHolderMapAt(fromBlock)
 
-    const newHolderMap = await getIncrementedSnapshot(fromBlock + 1n, toBlock, prevHolderMap)
+    const newHolderMap = await getIncrementedHolderMap(fromBlock + 1n, toBlock, prevHolderMap)
 
     saveSnapshot(toBlock, newHolderMap)
 }
