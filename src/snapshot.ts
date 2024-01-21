@@ -22,26 +22,17 @@ const getIncrementedSnapshot = async (fromBlock: bigint, toBlock: bigint, holder
     return holderMap
 }
 
-//const snapshot = async () => {
-//    const fromBlock = await getLastBlockNumber()
-//    const fromHolderMap = await getHolderMapAt(fromBlock)
-//
-//    const currentBlockNumber = await getCurrentBlockNumber()
-//
-//    const newHolderMap = await getIncrementedSnapshot(fromBlock + 1n, currentBlockNumber, fromHolderMap)
-//
-//    saveSnapshot(currentBlockNumber, newHolderMap)
-//}
-
 const snapshot = async () => {
+    const blockLimit = process.argv.length > 2 ? BigInt(process.argv[2]) : 0n
+
     const fromBlock = await getLastBlockNumber()
-    const fromHolderMap = await getHolderMapAt(fromBlock)
+    const toBlock = blockLimit === 0n ? await getCurrentBlockNumber() : fromBlock + blockLimit
 
-    const currentBlockNumber = fromBlock + 10000n
+    const prevHolderMap = await getHolderMapAt(fromBlock)
 
-    const newHolderMap = await getIncrementedSnapshot(fromBlock + 1n, currentBlockNumber, fromHolderMap)
+    const newHolderMap = await getIncrementedSnapshot(fromBlock + 1n, toBlock, prevHolderMap)
 
-    saveSnapshot(currentBlockNumber, newHolderMap)
+    saveSnapshot(toBlock, newHolderMap)
 }
 
 snapshot()

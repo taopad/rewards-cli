@@ -15,10 +15,6 @@ model snapshots_v1 {
   is_contract    Boolean
   is_blacklisted Boolean
 
-  @@id([block_number, address], map: "snapshots_v1_new_pk")
-  @@index([address], map: "snapshots_v1_new_address_index")
-}
-
-view snapshots_v1_block_numbers {
-  block_number BigInt @unique
+  @@id([block_number, address], map: "snapshots_v1_pk")
+  @@index([address], map: "snapshots_v1_address_index")
 }

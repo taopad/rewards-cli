@@ -34,28 +34,18 @@ CREATE TABLE public.snapshots_v1 (
 
 
 --
--- Name: snapshots_v1_block_numbers; Type: VIEW; Schema: public; Owner: -
---
-
-CREATE VIEW public.snapshots_v1_block_numbers AS
- SELECT DISTINCT snapshots_v1.block_number
-   FROM public.snapshots_v1
-  ORDER BY snapshots_v1.block_number;
-
-
---
--- Name: snapshots_v1 snapshots_v1_new_pk; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: snapshots_v1 snapshots_v1_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.snapshots_v1
-    ADD CONSTRAINT snapshots_v1_new_pk PRIMARY KEY (block_number, address);
+    ADD CONSTRAINT snapshots_v1_pk PRIMARY KEY (block_number, address);
 
 
 --
--- Name: snapshots_v1_new_address_index; Type: INDEX; Schema: public; Owner: -
+-- Name: snapshots_v1_address_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX snapshots_v1_new_address_index ON public.snapshots_v1 USING btree (address);
+CREATE INDEX snapshots_v1_address_index ON public.snapshots_v1 USING btree (address);
 
 
 --

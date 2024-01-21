@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "snapshot": "npx ts-node ./src/snapshot.ts"
+    "snapshot": "npx ts-node ./src/snapshot.ts",
+    "verify": "npx ts-node ./src/verify.ts"
   },
   "author": "",
   "license": "ISC",

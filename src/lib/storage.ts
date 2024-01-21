@@ -1,9 +1,18 @@
+import fs from "fs"
 import { PrismaClient } from "@prisma/client"
 
 import { initBlock } from "../../config"
 import { Snapshot, HolderMap } from "../types"
 
 const prisma = new PrismaClient()
+
+const replacer = (_: any, v: any) => typeof v === 'bigint' ? v.toString() : v
+
+const stringify = (object: Object) => JSON.stringify(object, replacer, "  ")
+
+export const writeSnapshot = (outFile: string, snapshot: Snapshot) => {
+    fs.writeFileSync(outFile, stringify(snapshot));
+}
 
 const parseHolderMap = (snapshot: Snapshot): HolderMap => {
     const holderMap: HolderMap = {}
@@ -40,7 +49,7 @@ const formatSnapshot = (blockNumber: bigint, holderMap: HolderMap): Snapshot => 
 }
 
 export const getLastBlockNumber = async () => {
-    const result = await prisma.snapshots_v1_block_numbers.aggregate({
+    const result = await prisma.snapshots_v1.aggregate({
         _max: {
             block_number: true
         }
