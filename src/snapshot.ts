@@ -1,37 +1,7 @@
-import { publicClient } from "../config/values"
-import { TaopadContract } from "../config/contracts"
-
+import { HolderMap } from "./types"
 import { transferEvents } from "./lib/events"
-import { HolderInfo, HolderMap } from "./types"
-
-import { saveSnapshot, disconnect } from "./lib/storage"
-import { getLastBlockNumber, getHolderMapAt } from "./lib/storage"
-
-const getCurrentBlockNumber = async () => {
-    return await publicClient.getBlockNumber()
-}
-
-const getIsContract = async (address: `0x${string}`) => {
-    const bytecode = await publicClient.getBytecode({ address })
-
-    return bytecode !== undefined
-}
-
-const getIsBlacklisted = async (blockNumber: bigint, address: `0x${string}`) => {
-    return await publicClient.readContract({
-        blockNumber,
-        ...TaopadContract,
-        functionName: "isBlacklisted",
-        args: [address],
-    })
-}
-
-const getNewHolderInfo = async (blockNumber: bigint, address: `0x${string}`): Promise<HolderInfo> => {
-    const isContract = await getIsContract(address)
-    const isBlacklisted = await getIsBlacklisted(blockNumber, address)
-
-    return { balance: 0n, isContract, isBlacklisted }
-}
+import { getCurrentBlockNumber, getNewHolderInfo } from "./lib/blockchain"
+import { getLastBlockNumber, getHolderMapAt, saveSnapshot, disconnect } from "./lib/storage"
 
 const getIncrementedSnapshot = async (fromBlock: bigint, toBlock: bigint, holderMap: HolderMap): Promise<HolderMap> => {
     const events = transferEvents(fromBlock, toBlock)
@@ -52,11 +22,22 @@ const getIncrementedSnapshot = async (fromBlock: bigint, toBlock: bigint, holder
     return holderMap
 }
 
+//const snapshot = async () => {
+//    const fromBlock = await getLastBlockNumber()
+//    const fromHolderMap = await getHolderMapAt(fromBlock)
+//
+//    const currentBlockNumber = await getCurrentBlockNumber()
+//
+//    const newHolderMap = await getIncrementedSnapshot(fromBlock + 1n, currentBlockNumber, fromHolderMap)
+//
+//    saveSnapshot(currentBlockNumber, newHolderMap)
+//}
+
 const snapshot = async () => {
     const fromBlock = await getLastBlockNumber()
     const fromHolderMap = await getHolderMapAt(fromBlock)
 
-    const currentBlockNumber = await getCurrentBlockNumber()
+    const currentBlockNumber = fromBlock + 10000n
 
     const newHolderMap = await getIncrementedSnapshot(fromBlock + 1n, currentBlockNumber, fromHolderMap)
 

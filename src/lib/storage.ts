@@ -1,7 +1,7 @@
 import { PrismaClient } from "@prisma/client"
 
+import { initBlock } from "../../config"
 import { Snapshot, HolderMap } from "../types"
-import { initBlock } from "../../config/values"
 
 const prisma = new PrismaClient()
 

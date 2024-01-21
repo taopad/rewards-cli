@@ -1,7 +1,6 @@
 import { parseAbiItem } from "viem"
 
-import { TaopadContract } from "../../config/contracts"
-import { publicClient, batchSize } from "../../config/values"
+import { publicClient, batchSize, TaopadContract } from "../../config"
 
 function* blockRanges(fromBlock: bigint, toBlock: bigint) {
     if (toBlock < fromBlock) {
