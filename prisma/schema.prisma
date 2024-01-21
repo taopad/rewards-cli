@@ -1,0 +1,24 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["views"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model snapshots_v1 {
+  block_number   BigInt
+  address        String  @db.Char(42)
+  balance        String  @db.VarChar
+  is_contract    Boolean
+  is_blacklisted Boolean
+
+  @@id([block_number, address], map: "snapshots_v1_new_pk")
+  @@index([address], map: "snapshots_v1_new_address_index")
+}
+
+view snapshots_v1_block_numbers {
+  block_number BigInt @unique
+}

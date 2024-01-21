@@ -1,0 +1,20 @@
+{
+  "name": "snapshots",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "snapshot": "npx ts-node ./src/snapshot.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.8.1",
+    "@types/node": "^20.11.5",
+    "dotenv": "^16.3.2",
+    "prisma": "^5.8.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "viem": "^2.4.0"
+  }
+}
