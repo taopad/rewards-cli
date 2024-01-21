@@ -1,9 +1,9 @@
 import { parseAbiItem } from "viem"
 
-import { publicClient } from "../../config/values"
 import { TaopadContract } from "../../config/contracts"
+import { publicClient, batchSize } from "../../config/values"
 
-function* blockRanges(fromBlock: bigint, toBlock: bigint, batchSize: bigint) {
+function* blockRanges(fromBlock: bigint, toBlock: bigint) {
     if (toBlock < fromBlock) {
         throw new Error("invalid block number range")
     }
@@ -23,8 +23,8 @@ function* blockRanges(fromBlock: bigint, toBlock: bigint, batchSize: bigint) {
     yield [a, b]
 }
 
-export async function* transferEvents(fromBlock: bigint, toBlock: bigint, batchSize: bigint) {
-    const ranges = blockRanges(fromBlock, toBlock, batchSize)
+export async function* transferEvents(fromBlock: bigint, toBlock: bigint) {
+    const ranges = blockRanges(fromBlock, toBlock)
 
     for (const [fromBlock, toBlock] of ranges) {
         console.log(fromBlock, toBlock)

@@ -34,7 +34,7 @@ const getNewHolderInfo = async (blockNumber: bigint, address: `0x${string}`): Pr
 }
 
 const getIncrementedSnapshot = async (fromBlock: bigint, toBlock: bigint, holderMap: HolderMap): Promise<HolderMap> => {
-    const events = transferEvents(fromBlock, toBlock, 2000n)
+    const events = transferEvents(fromBlock, toBlock)
 
     for await (const event of events) {
         const [addr1, addr2, value] = event.args
