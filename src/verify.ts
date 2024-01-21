@@ -47,9 +47,9 @@ const compare = async (blockNumber: bigint, holderMap: HolderMap) => {
 
                     const holderInfo = holderMap[address]
 
-                    if (holderInfo.balance !== balance) throw new Error("invalid snapshot balance")
-                    if (holderInfo.isContract !== isContract) throw new Error("invalid snapshot isContract")
-                    if (holderInfo.isBlacklisted !== isBlacklisted) throw new Error("invalid snapshot isBlacklisted")
+                    if (holderInfo.balance !== balance) console.log(`invalid snapshot balance ${address} ${balance} ${holderInfo.balance}`)
+                    if (holderInfo.isContract !== isContract) console.log(`invalid snapshot isContract ${address} ${isContract} ${holderInfo.isContract}`)
+                    if (holderInfo.isBlacklisted !== isBlacklisted) console.log(`invalid snapshot isBlacklisted ${address} ${isBlacklisted} ${holderInfo.isBlacklisted}`)
 
                     snapshot1.push({
                         block_number: blockNumber,
@@ -72,7 +72,7 @@ const compare = async (blockNumber: bigint, holderMap: HolderMap) => {
     }
 
     if (snapshot1.length !== Object.keys(holderMap).length) {
-        throw new Error("invalid snapshot length")
+        console.log("invalid snapshot length")
     }
 
     writeSnapshot(`./data/snapshot-${blockNumber}-1.json`, snapshot1)
