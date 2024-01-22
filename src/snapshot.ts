@@ -12,11 +12,12 @@ const getIncrementedHolderMap = async (fromBlock: bigint, toBlock: bigint, holde
         if (!holderMap[addr1]) holderMap[addr1] = await getNewHolderInfo(toBlock, addr1)
         if (!holderMap[addr2]) holderMap[addr2] = await getNewHolderInfo(toBlock, addr2)
 
+        // order matters because some events have the same from and to addresses.
+        holderMap[addr2].balance = holderMap[addr2].balance + value
+
         const newHolder1BalanceOf = holderMap[addr1].balance - value
-        const newHolder2BalanceOf = holderMap[addr2].balance + value
 
         holderMap[addr1].balance = newHolder1BalanceOf > 0n ? newHolder1BalanceOf : 0n
-        holderMap[addr2].balance = newHolder2BalanceOf > 0n ? newHolder2BalanceOf : 0n
     }
 
     return holderMap
