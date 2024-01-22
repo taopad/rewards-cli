@@ -1,13 +1,9 @@
-import { Snapshot, HolderMap } from "./types"
+import { Snapshot } from "./types"
 import { transferEvents } from "./lib/events"
-import { writeSnapshot, getHolderMapAt, disconnect } from "./lib/storage"
+import { getIsContract } from "./lib/blockchain"
+import { getSnapshotAt, writeSnapshot, disconnect } from "./lib/storage"
 import { publicClient, TaopadContract, initBlock } from "../config"
-
-const getIsContract = async (address: `0x${string}`) => {
-    const bytecode = await publicClient.getBytecode({ address })
-
-    return bytecode !== undefined
-}
+import { snapshotToHolderMap } from "./lib/utils"
 
 const getHolderInfo = async (blockNumber: bigint, address: `0x${string}`) => {
     return await publicClient.multicall({
@@ -28,10 +24,12 @@ const getHolderInfo = async (blockNumber: bigint, address: `0x${string}`) => {
     })
 }
 
-const compare = async (blockNumber: bigint, holderMap: HolderMap) => {
+const compare = async (blockNumber: bigint, snapshot: Snapshot) => {
     const snapshot1: Snapshot = []
     const snapshot2: Snapshot = []
     const seen: Record<string, boolean> = {}
+
+    const holderMap = snapshotToHolderMap(snapshot)
 
     const events = transferEvents(initBlock, blockNumber)
 
@@ -52,19 +50,19 @@ const compare = async (blockNumber: bigint, holderMap: HolderMap) => {
                     if (holderInfo.isBlacklisted !== isBlacklisted) console.log(`invalid snapshot isBlacklisted ${address} ${isBlacklisted} ${holderInfo.isBlacklisted}`)
 
                     snapshot1.push({
-                        block_number: blockNumber,
+                        blockNumber,
                         address,
-                        balance: balance.toString(),
-                        is_contract: isContract,
-                        is_blacklisted: isBlacklisted,
+                        balance: balance,
+                        isContract,
+                        isBlacklisted,
                     })
 
                     snapshot2.push({
-                        block_number: blockNumber,
+                        blockNumber,
                         address,
-                        balance: holderInfo.balance.toString(),
-                        is_contract: holderInfo.isContract,
-                        is_blacklisted: holderInfo.isBlacklisted,
+                        balance: holderInfo.balance,
+                        isContract: holderInfo.isContract,
+                        isBlacklisted: holderInfo.isBlacklisted,
                     })
                 }
             }
@@ -86,13 +84,13 @@ const verify = async () => {
 
     const blockNumber = BigInt(process.argv[2])
 
-    const holderMap = await getHolderMapAt(blockNumber)
+    const snapshot = await getSnapshotAt(blockNumber)
 
-    if (Object.keys(holderMap).length === 0) {
+    if (snapshot.length === 0) {
         throw new Error(`no data for snapshot at block ${blockNumber}`)
     }
 
-    await compare(blockNumber, holderMap)
+    await compare(blockNumber, snapshot)
 
     console.log("ok")
 }

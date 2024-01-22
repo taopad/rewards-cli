@@ -8,13 +8,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model snapshots_v1 {
+model distributions {
+  chain_id      Int
+  token         String @db.Char(42)
+  block_number  BigInt @unique(map: "distributions_block_number_index")
+  total_shares  String @db.VarChar
+  total_rewards String @db.VarChar
+  root          String @db.Char(66)
+
+  @@id([chain_id, token, block_number], map: "distributions_pk")
+  @@index([token], map: "distributions_token_index")
+}
+
+model proofs {
+  chain_id     Int
+  token        String   @db.Char(42)
+  block_number BigInt
+  address      String   @db.Char(42)
+  amount       String   @db.VarChar
+  proofs       String[] @db.Char(66)
+
+  @@id([chain_id, token, block_number, address], map: "proofs_pk")
+  @@index([address], map: "proofs_address_index")
+  @@index([block_number], map: "proofs_block_number_index")
+  @@index([token], map: "proofs_token_index")
+}
+
+model snapshots {
   block_number   BigInt
   address        String  @db.Char(42)
   balance        String  @db.VarChar
   is_contract    Boolean
   is_blacklisted Boolean
 
-  @@id([block_number, address], map: "snapshots_v1_pk")
-  @@index([address], map: "snapshots_v1_address_index")
+  @@id([block_number, address], map: "snapshots_pk")
+  @@index([address], map: "snapshots_address_index")
 }

@@ -2,7 +2,17 @@ import fs from "fs"
 import { PrismaClient } from "@prisma/client"
 
 import { initBlock } from "../../config"
-import { Snapshot, HolderMap } from "../types"
+import { Snapshot, RewardMap, Distribution } from "../types"
+
+type SnapshotLineDb = {
+    block_number: bigint
+    address: string
+    balance: string
+    is_contract: boolean
+    is_blacklisted: boolean
+}
+
+type SnapshotDb = SnapshotLineDb[]
 
 const prisma = new PrismaClient()
 
@@ -14,66 +24,117 @@ export const writeSnapshot = (outFile: string, snapshot: Snapshot) => {
     fs.writeFileSync(outFile, stringify(snapshot));
 }
 
-const parseHolderMap = (snapshot: Snapshot): HolderMap => {
-    const holderMap: HolderMap = {}
-
-    for (const item of snapshot) {
-        holderMap[item.address] = {
-            balance: BigInt(item.balance),
-            isContract: item.is_contract,
-            isBlacklisted: item.is_blacklisted,
-        }
-    }
-
-    return holderMap
+const parseSnapshot = (snapshot: SnapshotDb): Snapshot => {
+    return snapshot.map(line => ({
+        blockNumber: line.block_number,
+        address: line.address,
+        balance: BigInt(line.balance),
+        isContract: line.is_contract,
+        isBlacklisted: line.is_blacklisted,
+    }))
 }
 
-const formatSnapshot = (blockNumber: bigint, holderMap: HolderMap): Snapshot => {
-    const snapshot: Snapshot = []
-
-    for (const address in holderMap) {
-        const holderInfo = holderMap[address]
-
-        if (holderInfo.balance > 0) {
-            snapshot.push({
-                block_number: blockNumber,
-                address: address,
-                balance: holderInfo.balance.toString(),
-                is_contract: holderInfo.isContract,
-                is_blacklisted: holderInfo.isBlacklisted,
-            })
-        }
-    }
-
-    return snapshot
+const formatSnapshot = (snapshot: Snapshot): SnapshotDb => {
+    return snapshot.map(line => ({
+        block_number: line.blockNumber,
+        address: line.address,
+        balance: line.balance.toString(),
+        is_contract: line.isContract,
+        is_blacklisted: line.isBlacklisted,
+    }))
 }
 
-export const getLastBlockNumber = async () => {
-    const result = await prisma.snapshots_v1.aggregate({
+export const getLastSnapshotBlockNumber = async () => {
+    const results = await prisma.snapshots.aggregate({
         _max: {
             block_number: true
         }
     })
 
-    const max = result._max.block_number
+    const max = results._max.block_number
 
     return max === null ? initBlock - 1n : max
 }
 
-export const getHolderMapAt = async (blockNumber: bigint): Promise<HolderMap> => {
-    const results = await prisma.snapshots_v1.findMany({
+export const getSnapshotAt = async (blockNumber: bigint): Promise<Snapshot> => {
+    const results = await prisma.snapshots.findMany({
         where: {
             block_number: blockNumber
         }
     })
 
-    return parseHolderMap(results)
+    return parseSnapshot(results)
 }
 
-export const saveSnapshot = async (blockNumber: bigint, holderMap: HolderMap) => {
-    await prisma.snapshots_v1.createMany({
-        data: formatSnapshot(blockNumber, holderMap)
+export const saveSnapshot = async (snapshot: Snapshot) => {
+    await prisma.snapshots.createMany({
+        data: formatSnapshot(snapshot)
     })
+}
+
+const getLastDistributionBlockNumber = async (chainId: number, token: `0x${string}`) => {
+    const results = await prisma.distributions.aggregate({
+        _max: {
+            block_number: true
+        },
+        where: { chain_id: chainId, token }
+    })
+
+    return results._max.block_number
+}
+
+export const getLastRewardMap = async (chainId: number, token: `0x${string}`): Promise<RewardMap> => {
+    const rewardMap: RewardMap = {}
+
+    const blockNumber = await getLastDistributionBlockNumber(chainId, token)
+
+    if (blockNumber === null) {
+        return rewardMap
+    }
+
+    const results = await prisma.proofs.findMany({
+        where: {
+            chain_id: chainId,
+            block_number: blockNumber,
+            token,
+        }
+    })
+
+    for (const { address, amount } of results) {
+        rewardMap[address] = BigInt(amount)
+    }
+
+    return rewardMap
+}
+
+export const saveDistribution = async (
+    chainId: number,
+    token: `0x${string}`,
+    blockNumber: bigint,
+    distribution: Distribution
+) => {
+    await prisma.$transaction([
+        prisma.distributions.create({
+            data: {
+                token,
+                chain_id: chainId,
+                block_number: blockNumber,
+                total_shares: distribution.totalShares.toString(),
+                total_rewards: distribution.totalRewards.toString(),
+                root: distribution.root,
+            }
+        }),
+        prisma.proofs.createMany({
+            data: distribution.proofs.map(proof => ({
+                token,
+                chain_id: chainId,
+                block_number: blockNumber,
+                address: proof[0],
+                amount: proof[1].toString(),
+                proofs: proof[2],
+            }))
+        })
+    ])
 }
 
 export const disconnect = async () => prisma.$disconnect()

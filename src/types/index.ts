@@ -1,9 +1,9 @@
 type SnapshotLine = {
-    block_number: bigint
+    blockNumber: bigint
     address: string
-    balance: string
-    is_contract: boolean
-    is_blacklisted: boolean
+    balance: bigint
+    isContract: boolean
+    isBlacklisted: boolean
 }
 
 export type Snapshot = SnapshotLine[]
@@ -14,4 +14,15 @@ export type HolderInfo = {
     balance: bigint
     isContract: boolean
     isBlacklisted: boolean
+}
+
+export type RewardMap = Record<string, bigint>
+
+export type Proof = [string, bigint, string[]]
+
+export type Distribution = {
+    totalShares: bigint
+    totalRewards: bigint
+    root: string
+    proofs: Proof[]
 }

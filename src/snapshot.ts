@@ -1,9 +1,12 @@
-import { HolderMap } from "./types"
+import { Snapshot } from "./types"
 import { transferEvents } from "./lib/events"
 import { getCurrentBlockNumber, getNewHolderInfo } from "./lib/blockchain"
-import { getLastBlockNumber, getHolderMapAt, saveSnapshot, disconnect } from "./lib/storage"
+import { getLastSnapshotBlockNumber, getSnapshotAt, saveSnapshot, disconnect } from "./lib/storage"
+import { snapshotToHolderMap, holderMapToSnapshot } from "./lib/utils"
 
-const getIncrementedHolderMap = async (fromBlock: bigint, toBlock: bigint, holderMap: HolderMap): Promise<HolderMap> => {
+const getIncrementedHolderMap = async (fromBlock: bigint, toBlock: bigint, snapshot: Snapshot): Promise<Snapshot> => {
+    const holderMap = snapshotToHolderMap(snapshot)
+
     const events = transferEvents(fromBlock, toBlock)
 
     for await (const event of events) {
@@ -20,20 +23,22 @@ const getIncrementedHolderMap = async (fromBlock: bigint, toBlock: bigint, holde
         holderMap[addr1].balance = newHolder1BalanceOf > 0n ? newHolder1BalanceOf : 0n
     }
 
-    return holderMap
+    return holderMapToSnapshot(toBlock, holderMap)
 }
 
 const snapshot = async () => {
     const blockLimit = process.argv.length > 2 ? BigInt(process.argv[2]) : 0n
 
-    const fromBlock = await getLastBlockNumber()
-    const toBlock = blockLimit === 0n ? await getCurrentBlockNumber() : fromBlock + blockLimit
+    const lastBlock = await getLastSnapshotBlockNumber()
 
-    const prevHolderMap = await getHolderMapAt(fromBlock)
+    const fromBlock = lastBlock + 1n
+    const toBlock = blockLimit === 0n ? await getCurrentBlockNumber() : lastBlock + blockLimit
 
-    const newHolderMap = await getIncrementedHolderMap(fromBlock + 1n, toBlock, prevHolderMap)
+    const prevSnapshot = await getSnapshotAt(lastBlock)
 
-    saveSnapshot(toBlock, newHolderMap)
+    const nextSnapshot = await getIncrementedHolderMap(fromBlock, toBlock, prevSnapshot)
+
+    saveSnapshot(nextSnapshot)
 }
 
 snapshot()

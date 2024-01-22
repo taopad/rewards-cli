@@ -5,13 +5,13 @@ export const getCurrentBlockNumber = async () => {
     return await publicClient.getBlockNumber()
 }
 
-const getIsContract = async (address: `0x${string}`) => {
+export const getIsContract = async (address: `0x${string}`) => {
     const bytecode = await publicClient.getBytecode({ address })
 
     return bytecode !== undefined
 }
 
-const getIsBlacklisted = async (blockNumber: bigint, address: `0x${string}`) => {
+export const getIsBlacklisted = async (blockNumber: bigint, address: `0x${string}`) => {
     return await publicClient.readContract({
         blockNumber,
         ...TaopadContract,
