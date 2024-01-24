@@ -1,28 +1,9 @@
 import { Snapshot } from "./types"
 import { transferEvents } from "./lib/events"
-import { getIsContract } from "./lib/blockchain"
+import { getHolderInfo } from "./lib/blockchain"
 import { getSnapshotAt, writeSnapshot, disconnect } from "./lib/storage"
-import { publicClient, TaopadContract, initBlock } from "../config"
 import { snapshotToHolderMap } from "./lib/utils"
-
-const getHolderInfo = async (blockNumber: bigint, address: `0x${string}`) => {
-    return await publicClient.multicall({
-        blockNumber,
-        allowFailure: false,
-        contracts: [
-            {
-                ...TaopadContract,
-                functionName: "balanceOf",
-                args: [address],
-            },
-            {
-                ...TaopadContract,
-                functionName: "isBlacklisted",
-                args: [address],
-            },
-        ],
-    })
-}
+import { initBlock } from "../config"
 
 const compare = async (blockNumber: bigint, snapshot: Snapshot) => {
     const snapshot1: Snapshot = []
@@ -39,15 +20,21 @@ const compare = async (blockNumber: bigint, snapshot: Snapshot) => {
         for (const address of [addr1, addr2]) {
             if (!seen[address]) {
                 seen[address] = true
-                const [balance, isBlacklisted] = await getHolderInfo(blockNumber, address)
+                const { balance, isContract, isBlacklisted } = await getHolderInfo(blockNumber, address)
                 if (balance > 0) {
-                    const isContract = await getIsContract(address)
-
                     const holderInfo = holderMap[address]
 
-                    if (holderInfo.balance !== balance) console.log(`invalid snapshot balance ${address} ${balance} ${holderInfo.balance}`)
-                    if (holderInfo.isContract !== isContract) console.log(`invalid snapshot isContract ${address} ${isContract} ${holderInfo.isContract}`)
-                    if (holderInfo.isBlacklisted !== isBlacklisted) console.log(`invalid snapshot isBlacklisted ${address} ${isBlacklisted} ${holderInfo.isBlacklisted}`)
+                    if (holderInfo.balance !== balance) {
+                        throw new Error(`invalid snapshot balance ${address} ${balance} ${holderInfo.balance}`)
+                    }
+
+                    if (holderInfo.isContract !== isContract) {
+                        throw new Error(`invalid snapshot isContract ${address} ${isContract} ${holderInfo.isContract}`)
+                    }
+
+                    if (holderInfo.isBlacklisted !== isBlacklisted) {
+                        throw new Error(`invalid snapshot isBlacklisted ${address} ${isBlacklisted} ${holderInfo.isBlacklisted}`)
+                    }
 
                     snapshot1.push({
                         blockNumber,
@@ -70,7 +57,7 @@ const compare = async (blockNumber: bigint, snapshot: Snapshot) => {
     }
 
     if (snapshot1.length !== Object.keys(holderMap).length) {
-        console.log("invalid snapshot length")
+        throw new Error("invalid snapshot length")
     }
 
     writeSnapshot(`./data/snapshot-${blockNumber}-1.json`, snapshot1)
@@ -91,8 +78,6 @@ const verify = async () => {
     }
 
     await compare(blockNumber, snapshot)
-
-    console.log("ok")
 }
 
 verify()
