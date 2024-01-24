@@ -49,3 +49,27 @@ export const getHolderInfo = async (blockNumber: bigint, address: `0x${string}`)
 
     return { balance, isContract, isBlacklisted }
 }
+
+export const formatAmount = async (token: `0x${string}`, amount: number): Promise<bigint> => {
+    const decimals = await publicClient.readContract({
+        address: token,
+        abi: [
+            {
+                "inputs": [],
+                "name": "decimals",
+                "outputs": [
+                    {
+                        "internalType": "uint8",
+                        "name": "",
+                        "type": "uint8"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+        ] as const,
+        functionName: "decimals",
+    })
+
+    return BigInt(amount) * (10n ** BigInt(decimals))
+}

@@ -1,8 +1,11 @@
+import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { RewardMap, Snapshot, Distribution, Proof } from "./types"
-import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
+import { getDistributionAt, getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, saveDistribution, disconnect } from "./lib/storage"
+import { formatAmount } from "./lib/blockchain"
+import { chainIds } from "../config"
 
 const shareFilter = (share: { isContract: boolean, isBlacklisted: boolean }) => !share.isContract && !share.isBlacklisted
 
@@ -38,23 +41,84 @@ const getDistribution = async (rewardAmount: bigint, rewardMap: RewardMap, snaps
     return { totalShares, totalRewards, root: tree.root, proofs }
 }
 
+const parseChainId = (): number => {
+    if (process.argv.length < 3) {
+        throw new Error("chain id is required [chain_id, token_address, reward_amount, block_number?]")
+    }
+
+    const chainId = parseInt(process.argv[2])
+
+    if (isNaN(chainId)) {
+        throw new Error("chain_id must be parsable as number")
+    }
+
+    if (chainIds.indexOf(chainId) < 0) {
+        throw new Error(`chain_id must be one of [${chainIds.join(", ")}]`)
+    }
+
+    return chainId
+}
+
+const parseTokenAddress = (): `0x${string}` => {
+    if (process.argv.length < 4) {
+        throw new Error("token address is required [chain_id, token_address, reward_amount, block_number?]")
+    }
+
+    const token = process.argv[3]
+
+    if (!isAddress(token)) {
+        throw new Error("token_address must be a valid address")
+    }
+
+    return token
+}
+
+const parseRewardAmount = (): number => {
+    if (process.argv.length < 5) {
+        throw new Error("reward_amount is required [chain_id, token_address, reward_amount, block_number?]")
+    }
+
+    const rewardAmount = parseInt(process.argv[4])
+
+    if (isNaN(rewardAmount)) {
+        throw new Error("reward_amount must be parsable as number")
+    }
+
+    return rewardAmount
+}
+
 const distribute = async () => {
-    // must pull this from ags
-    const chainId = 1
-    const token = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" // usdc
-    const rewardAmount = 10000000000n // 10000
+    // 10000 USDC on ethereum
+    // 1 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 10000
 
-    const rewardMap = await getLastRewardMap(chainId, token)
+    // parse input.
+    const chainId = parseChainId()
+    const token = parseTokenAddress()
+    const rewardAmount = await formatAmount(token, parseRewardAmount())
 
+    // get last snapshot block number.
     const blockNumber = await getLastSnapshotBlockNumber()
 
+    // ensure theres a snapshot for this block.
     const snapshot = await getSnapshotAt(blockNumber)
+
+    if (snapshot.length === 0) {
+        throw new Error(`no snapshot for block ${blockNumber}`)
+    }
+
+    // ensure no distribution exists for this block.
+    const hasDistribution = (await getDistributionAt(blockNumber)) !== null
+
+    if (hasDistribution) {
+        throw new Error(`distribution already exists for block ${blockNumber}`)
+    }
+
+    // compute and save the distribution.
+    const rewardMap = await getLastRewardMap(chainId, token)
 
     const distribution = await getDistribution(rewardAmount, rewardMap, snapshot)
 
     saveDistribution(chainId, token, blockNumber, distribution)
-
-    console.log(chainId, token, blockNumber, distribution)
 }
 
 distribute()

@@ -107,6 +107,14 @@ export const getLastRewardMap = async (chainId: number, token: `0x${string}`): P
     return rewardMap
 }
 
+export const getDistributionAt = async (blockNumber: bigint) => {
+    return await prisma.distributions.findFirst({
+        where: {
+            block_number: blockNumber
+        }
+    })
+}
+
 export const saveDistribution = async (
     chainId: number,
     token: `0x${string}`,
