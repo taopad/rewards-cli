@@ -26,8 +26,20 @@ const getIncrementedSnapshot = async (fromBlock: bigint, toBlock: bigint, snapsh
     return holderMapToSnapshot(toBlock, holderMap)
 }
 
+const parseBlockLimit = (): bigint => {
+    if (process.argv.length < 3) {
+        return 0n
+    }
+
+    try {
+        return BigInt(process.argv[2])
+    } catch (e: any) {
+        throw new Error("block limit must be parsable as bigint")
+    }
+}
+
 const snapshot = async () => {
-    const blockLimit = process.argv.length > 2 ? BigInt(process.argv[2]) : 0n
+    const blockLimit = parseBlockLimit()
 
     const lastBlock = await getLastSnapshotBlockNumber()
 
