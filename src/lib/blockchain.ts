@@ -1,5 +1,5 @@
 import { HolderInfo } from "../types"
-import { publicClient, TaopadContract } from "../../config"
+import { publicClient, publicClientFactory, TaopadContract } from "../../config"
 
 export const getCurrentBlockNumber = async () => {
     return await publicClient.getBlockNumber()
@@ -50,7 +50,9 @@ export const getHolderInfo = async (blockNumber: bigint, address: `0x${string}`)
     return { balance, isContract, isBlacklisted }
 }
 
-export const formatAmount = async (token: `0x${string}`, amount: number): Promise<bigint> => {
+export const formatAmount = async (chainId: number, token: `0x${string}`, amount: number): Promise<bigint> => {
+    const publicClient = publicClientFactory(chainId)
+
     const decimals = await publicClient.readContract({
         address: token,
         abi: [

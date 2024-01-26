@@ -1,11 +1,11 @@
 import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
+import { chainIds, selectChain } from "../config"
 import { RewardMap, Snapshot, Distribution, Proof } from "./types"
 import { getDistributionAt, getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, saveDistribution, disconnect } from "./lib/storage"
 import { formatAmount } from "./lib/blockchain"
-import { chainIds } from "../config"
 
 const shareFilter = (share: { isContract: boolean, isBlacklisted: boolean }) => !share.isContract && !share.isBlacklisted
 
@@ -52,7 +52,9 @@ const parseChainId = (): number => {
         throw new Error("chain_id must be parsable as number")
     }
 
-    if (chainIds.indexOf(chainId) < 0) {
+    const chain = selectChain(chainId)
+
+    if (chain === undefined) {
         throw new Error(`chain_id must be one of [${chainIds.join(", ")}]`)
     }
 
@@ -94,7 +96,7 @@ const distribute = async () => {
     // parse input.
     const chainId = parseChainId()
     const token = parseTokenAddress()
-    const rewardAmount = await formatAmount(token, parseRewardAmount())
+    const rewardAmount = await formatAmount(chainId, token, parseRewardAmount())
 
     // get last snapshot block number.
     const blockNumber = await getLastSnapshotBlockNumber()

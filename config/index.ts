@@ -1,6 +1,7 @@
 import "dotenv/config"
+
 import { createPublicClient, http } from "viem"
-import { mainnet } from "viem/chains"
+import { mainnet, arbitrum } from "viem/chains"
 import TaopadAbi from "../abi/Taopad"
 
 if (!process.env.RPC_URL) throw new Error("RPC_URL env var must be defined")
@@ -23,4 +24,22 @@ export const TaopadContract = {
 }
 
 // distribution are allowed only on those chains.
-export const chainIds = [1]
+export const chains = [mainnet, arbitrum]
+
+export const chainIds = chains.map(c => c.id)
+
+export const selectChain = (chainId: number) => chains.filter(c => c.id === chainId).shift()
+
+export const publicClientFactory = (chainId: number) => {
+    if (chainId === 1) {
+        return publicClient
+    }
+
+    const chain = selectChain(chainId)
+
+    if (chain === undefined) {
+        throw new Error("invalid chain id")
+    }
+
+    return createPublicClient({ chain, transport: http() })
+}
