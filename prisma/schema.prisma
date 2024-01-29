@@ -11,13 +11,14 @@ datasource db {
 model distributions {
   chain_id      Int
   token         String @db.Char(42)
-  block_number  BigInt @unique(map: "distributions_block_number_index")
+  block_number  BigInt
   total_shares  String @db.VarChar
   total_rewards String @db.VarChar
   root          String @db.Char(66)
 
   @@id([chain_id, token, block_number], map: "distributions_pk")
   @@index([token], map: "distributions_token_index")
+  @@index([block_number], map: "distributions_block_number_index")
 }
 
 model proofs {

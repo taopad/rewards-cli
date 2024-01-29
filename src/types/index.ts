@@ -21,6 +21,15 @@ export type RewardMap = Record<string, bigint>
 export type Proof = [string, bigint, string[]]
 
 export type Distribution = {
+    chainId: number
+    token: string
+    blockNumber: bigint
+    totalShares: bigint
+    totalRewards: bigint
+    root: string
+}
+
+export type DistributionResult = {
     totalShares: bigint
     totalRewards: bigint
     root: string

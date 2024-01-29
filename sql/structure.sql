@@ -89,7 +89,7 @@ ALTER TABLE ONLY public.snapshots
 -- Name: distributions_block_number_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX distributions_block_number_index ON public.distributions USING btree (block_number);
+CREATE INDEX distributions_block_number_index ON public.distributions USING btree (block_number);
 
 
 --

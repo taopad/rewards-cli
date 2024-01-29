@@ -2,17 +2,7 @@ import fs from "fs"
 import { PrismaClient } from "@prisma/client"
 
 import { initBlock } from "../../config"
-import { Snapshot, RewardMap, Distribution } from "../types"
-
-type SnapshotLineDb = {
-    block_number: bigint
-    address: string
-    balance: string
-    is_contract: boolean
-    is_blacklisted: boolean
-}
-
-type SnapshotDb = SnapshotLineDb[]
+import { Snapshot, RewardMap, Distribution, DistributionResult } from "../types"
 
 const prisma = new PrismaClient()
 
@@ -23,6 +13,20 @@ const stringify = (object: Object) => JSON.stringify(object, replacer, "  ")
 export const writeSnapshot = (outFile: string, snapshot: Snapshot) => {
     fs.writeFileSync(outFile, stringify(snapshot));
 }
+
+// =============================================================================
+// snapshot data.
+// =============================================================================
+
+type SnapshotLineDb = {
+    block_number: bigint
+    address: string
+    balance: string
+    is_contract: boolean
+    is_blacklisted: boolean
+}
+
+type SnapshotDb = SnapshotLineDb[]
 
 const parseSnapshot = (snapshot: SnapshotDb): Snapshot => {
     return snapshot.map(line => ({
@@ -72,6 +76,73 @@ export const saveSnapshot = async (snapshot: Snapshot) => {
     })
 }
 
+// =============================================================================
+// distributions data.
+// =============================================================================
+
+type DistributionLineDb = {
+    chain_id: number
+    token: string
+    block_number: bigint
+    total_shares: string
+    total_rewards: string
+    root: string
+}
+
+type DistributionDb = DistributionLineDb[]
+
+const parseDistributions = (distributions: DistributionDb): Distribution[] => {
+    return distributions.map(line => ({
+        chainId: line.chain_id,
+        token: line.token,
+        blockNumber: line.block_number,
+        totalShares: BigInt(line.total_shares),
+        totalRewards: BigInt(line.total_rewards),
+        root: line.root,
+    }))
+}
+
+export const getDistributions = async (chainId: number, token: `0x${string}`): Promise<Distribution[]> => {
+    const results = await prisma.distributions.findMany({
+        where: {
+            chain_id: chainId,
+            token: token,
+        },
+    })
+
+    return parseDistributions(results)
+}
+
+export const saveDistribution = async (
+    chainId: number,
+    token: `0x${string}`,
+    blockNumber: bigint,
+    distribution: DistributionResult
+) => {
+    await prisma.$transaction([
+        prisma.distributions.create({
+            data: {
+                token,
+                chain_id: chainId,
+                block_number: blockNumber,
+                total_shares: distribution.totalShares.toString(),
+                total_rewards: distribution.totalRewards.toString(),
+                root: distribution.root,
+            }
+        }),
+        prisma.proofs.createMany({
+            data: distribution.proofs.map(proof => ({
+                token,
+                chain_id: chainId,
+                block_number: blockNumber,
+                address: proof[0],
+                amount: proof[1].toString(),
+                proofs: proof[2],
+            }))
+        })
+    ])
+}
+
 const getLastDistributionBlockNumber = async (chainId: number, token: `0x${string}`) => {
     const results = await prisma.distributions.aggregate({
         _max: {
@@ -105,44 +176,6 @@ export const getLastRewardMap = async (chainId: number, token: `0x${string}`): P
     }
 
     return rewardMap
-}
-
-export const getDistributionAt = async (blockNumber: bigint) => {
-    return await prisma.distributions.findFirst({
-        where: {
-            block_number: blockNumber
-        }
-    })
-}
-
-export const saveDistribution = async (
-    chainId: number,
-    token: `0x${string}`,
-    blockNumber: bigint,
-    distribution: Distribution
-) => {
-    await prisma.$transaction([
-        prisma.distributions.create({
-            data: {
-                token,
-                chain_id: chainId,
-                block_number: blockNumber,
-                total_shares: distribution.totalShares.toString(),
-                total_rewards: distribution.totalRewards.toString(),
-                root: distribution.root,
-            }
-        }),
-        prisma.proofs.createMany({
-            data: distribution.proofs.map(proof => ({
-                token,
-                chain_id: chainId,
-                block_number: blockNumber,
-                address: proof[0],
-                amount: proof[1].toString(),
-                proofs: proof[2],
-            }))
-        })
-    ])
 }
 
 export const disconnect = async () => prisma.$disconnect()
