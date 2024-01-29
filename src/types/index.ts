@@ -1,3 +1,11 @@
+export type HolderMap = Record<string, HolderInfo>
+
+export type HolderInfo = {
+    balance: bigint
+    isContract: boolean
+    isBlacklisted: boolean
+}
+
 type SnapshotLine = {
     blockNumber: bigint
     address: string
@@ -8,17 +16,7 @@ type SnapshotLine = {
 
 export type Snapshot = SnapshotLine[]
 
-export type HolderMap = Record<string, HolderInfo>
-
-export type HolderInfo = {
-    balance: bigint
-    isContract: boolean
-    isBlacklisted: boolean
-}
-
 export type RewardMap = Record<string, bigint>
-
-export type Proof = [string, bigint, string[]]
 
 export type Distribution = {
     chainId: number
@@ -33,5 +31,20 @@ export type DistributionResult = {
     totalShares: bigint
     totalRewards: bigint
     root: string
-    proofs: Proof[]
+    proofs: DistributionProof[]
 }
+
+export type DistributionProof = [string, bigint, string[]]
+
+export type Whitelist = {
+    blockNumber: bigint
+    minAmount: bigint
+    root: string
+}
+
+export type WhitelistResult = {
+    root: string
+    proofs: WhitelistProof[]
+}
+
+export type WhitelistProof = [string, bigint, string[]]

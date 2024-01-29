@@ -21,20 +21,6 @@ model distributions {
   @@index([block_number], map: "distributions_block_number_index")
 }
 
-model proofs {
-  chain_id     Int
-  token        String   @db.Char(42)
-  block_number BigInt
-  address      String   @db.Char(42)
-  amount       String   @db.VarChar
-  proofs       String[] @db.Char(66)
-
-  @@id([chain_id, token, block_number, address], map: "proofs_pk")
-  @@index([address], map: "proofs_address_index")
-  @@index([block_number], map: "proofs_block_number_index")
-  @@index([token], map: "proofs_token_index")
-}
-
 model snapshots {
   block_number   BigInt
   address        String  @db.Char(42)
@@ -44,4 +30,34 @@ model snapshots {
 
   @@id([block_number, address], map: "snapshots_pk")
   @@index([address], map: "snapshots_address_index")
+}
+
+model distributions_proofs {
+  chain_id     Int
+  token        String   @db.Char(42)
+  block_number BigInt
+  address      String   @db.Char(42)
+  amount       String   @db.VarChar
+  proofs       String[] @db.Char(66)
+
+  @@id([chain_id, token, block_number, address], map: "distributions_proofs_pk")
+  @@index([address], map: "distributions_proofs_address_index")
+  @@index([block_number], map: "distributions_proofs_block_number_index")
+  @@index([token], map: "distributions_proofs_token_index")
+}
+
+model whitelists {
+  block_number BigInt @id(map: "whitelists_pk")
+  min_amount   String @db.VarChar
+  root         String @db.Char(66)
+}
+
+model whitelists_proofs {
+  block_number BigInt
+  address      String   @db.Char(42)
+  balance      String   @db.VarChar
+  proofs       String[] @db.Char(66)
+
+  @@id([block_number, address], map: "whitelists_proofs_pk")
+  @@index([address], map: "whitelists_proofs_address_index")
 }

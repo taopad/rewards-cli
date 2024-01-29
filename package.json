@@ -6,6 +6,7 @@
   "scripts": {
     "snapshot": "npx ts-node ./src/snapshot.ts",
     "distribute": "npx ts-node ./src/distribute.ts",
+    "whitelist": "npx ts-node ./src/whitelist.ts",
     "verify": "npx ts-node ./src/verify.ts"
   },
   "author": "",

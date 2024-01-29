@@ -2,7 +2,9 @@ import fs from "fs"
 import { PrismaClient } from "@prisma/client"
 
 import { initBlock } from "../../config"
-import { Snapshot, RewardMap, Distribution, DistributionResult } from "../types"
+import { Snapshot } from "../types"
+import { Whitelist, WhitelistResult } from "../types"
+import { RewardMap, Distribution, DistributionResult } from "../types"
 
 const prisma = new PrismaClient()
 
@@ -130,7 +132,7 @@ export const saveDistribution = async (
                 root: distribution.root,
             }
         }),
-        prisma.proofs.createMany({
+        prisma.distributions_proofs.createMany({
             data: distribution.proofs.map(proof => ({
                 token,
                 chain_id: chainId,
@@ -163,7 +165,7 @@ export const getLastRewardMap = async (chainId: number, token: `0x${string}`): P
         return rewardMap
     }
 
-    const results = await prisma.proofs.findMany({
+    const results = await prisma.distributions_proofs.findMany({
         where: {
             chain_id: chainId,
             block_number: blockNumber,
@@ -176,6 +178,56 @@ export const getLastRewardMap = async (chainId: number, token: `0x${string}`): P
     }
 
     return rewardMap
+}
+
+// =============================================================================
+// whitelist data.
+// =============================================================================
+
+type WhitelistLineDb = {
+    block_number: bigint
+    min_amount: string
+    root: string
+}
+
+type WhitelistDb = WhitelistLineDb[]
+
+const parseWhitelists = (whitelists: WhitelistDb): Whitelist[] => {
+    return whitelists.map(line => ({
+        blockNumber: line.block_number,
+        minAmount: BigInt(line.min_amount),
+        root: line.root,
+    }))
+}
+
+export const getWhitelists = async (): Promise<Whitelist[]> => {
+    const results = await prisma.whitelists.findMany()
+
+    return parseWhitelists(results)
+}
+
+export const saveWhitelist = async (
+    blockNumber: bigint,
+    minAmount: bigint,
+    whitelist: WhitelistResult
+) => {
+    await prisma.$transaction([
+        prisma.whitelists.create({
+            data: {
+                block_number: blockNumber,
+                min_amount: minAmount.toString(),
+                root: whitelist.root,
+            }
+        }),
+        prisma.whitelists_proofs.createMany({
+            data: whitelist.proofs.map(proof => ({
+                block_number: blockNumber,
+                address: proof[0],
+                balance: proof[1].toString(),
+                proofs: proof[2],
+            }))
+        })
+    ])
 }
 
 export const disconnect = async () => prisma.$disconnect()

@@ -2,7 +2,7 @@ import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { chainIds, selectChain } from "../config"
-import { RewardMap, Snapshot, Distribution, DistributionResult, Proof } from "./types"
+import { Snapshot, RewardMap, Distribution, DistributionResult, DistributionProof } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getDistributions, saveDistribution, disconnect } from "./lib/storage"
 import { formatAmount } from "./lib/blockchain"
@@ -13,7 +13,7 @@ const shareMapper = (share: { balance: bigint }) => share.balance
 
 const shareReducer = (acc: bigint, current: bigint) => acc + current
 
-const getDistributionResult = async (rewardAmount: bigint, rewardMap: RewardMap, snapshot: Snapshot): Promise<DistributionResult> => {
+const getDistributionResult = (rewardAmount: bigint, rewardMap: RewardMap, snapshot: Snapshot): DistributionResult => {
     const shares = snapshot.filter(shareFilter)
 
     const totalShares = shares.map(shareMapper).reduce(shareReducer)
@@ -32,7 +32,7 @@ const getDistributionResult = async (rewardAmount: bigint, rewardMap: RewardMap,
 
     const tree = StandardMerkleTree.of(Object.entries(rewardMap), ["address", "uint256"])
 
-    const proofs: Proof[] = []
+    const proofs: DistributionProof[] = []
 
     for (const [i, v] of tree.entries()) {
         proofs.push([...v, tree.getProof(i)]);
@@ -141,7 +141,7 @@ const distribute = async () => {
     // compute and save the distribution.
     const rewardMap = await getLastRewardMap(chainId, token)
 
-    const distribution = await getDistributionResult(rewardAmount, rewardMap, snapshot)
+    const distribution = getDistributionResult(rewardAmount, rewardMap, snapshot)
 
     saveDistribution(chainId, token, blockNumber, distribution)
 

@@ -35,10 +35,10 @@ CREATE TABLE public.distributions (
 
 
 --
--- Name: proofs; Type: TABLE; Schema: public; Owner: -
+-- Name: distributions_proofs; Type: TABLE; Schema: public; Owner: -
 --
 
-CREATE TABLE public.proofs (
+CREATE TABLE public.distributions_proofs (
     chain_id integer NOT NULL,
     token character(42) NOT NULL,
     block_number bigint NOT NULL,
@@ -62,6 +62,29 @@ CREATE TABLE public.snapshots (
 
 
 --
+-- Name: whitelists; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.whitelists (
+    block_number bigint NOT NULL,
+    min_amount character varying NOT NULL,
+    root character(66) NOT NULL
+);
+
+
+--
+-- Name: whitelists_proofs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.whitelists_proofs (
+    block_number bigint NOT NULL,
+    address character(42) NOT NULL,
+    balance character varying NOT NULL,
+    proofs character(66)[] NOT NULL
+);
+
+
+--
 -- Name: distributions distributions_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -70,11 +93,11 @@ ALTER TABLE ONLY public.distributions
 
 
 --
--- Name: proofs proofs_pk; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: distributions_proofs distributions_proofs_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.proofs
-    ADD CONSTRAINT proofs_pk PRIMARY KEY (chain_id, token, block_number, address);
+ALTER TABLE ONLY public.distributions_proofs
+    ADD CONSTRAINT distributions_proofs_pk PRIMARY KEY (chain_id, token, block_number, address);
 
 
 --
@@ -86,10 +109,47 @@ ALTER TABLE ONLY public.snapshots
 
 
 --
+-- Name: whitelists whitelists_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whitelists
+    ADD CONSTRAINT whitelists_pk PRIMARY KEY (block_number);
+
+
+--
+-- Name: whitelists_proofs whitelists_proofs_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whitelists_proofs
+    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (block_number, address);
+
+
+--
 -- Name: distributions_block_number_index; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX distributions_block_number_index ON public.distributions USING btree (block_number);
+
+
+--
+-- Name: distributions_proofs_address_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX distributions_proofs_address_index ON public.distributions_proofs USING btree (address);
+
+
+--
+-- Name: distributions_proofs_block_number_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX distributions_proofs_block_number_index ON public.distributions_proofs USING btree (block_number);
+
+
+--
+-- Name: distributions_proofs_token_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX distributions_proofs_token_index ON public.distributions_proofs USING btree (token);
 
 
 --
@@ -100,31 +160,17 @@ CREATE INDEX distributions_token_index ON public.distributions USING btree (toke
 
 
 --
--- Name: proofs_address_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX proofs_address_index ON public.proofs USING btree (address);
-
-
---
--- Name: proofs_block_number_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX proofs_block_number_index ON public.proofs USING btree (block_number);
-
-
---
--- Name: proofs_token_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX proofs_token_index ON public.proofs USING btree (token);
-
-
---
 -- Name: snapshots_address_index; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX snapshots_address_index ON public.snapshots USING btree (address);
+
+
+--
+-- Name: whitelists_proofs_address_index; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX whitelists_proofs_address_index ON public.whitelists_proofs USING btree (address);
 
 
 --
