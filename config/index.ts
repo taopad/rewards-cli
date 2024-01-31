@@ -2,7 +2,10 @@ import "dotenv/config"
 
 import { createPublicClient, http } from "viem"
 import { mainnet, arbitrum } from "viem/chains"
+import { testnet } from "./testnet"
+
 import TaopadAbi from "../abi/Taopad"
+import DistributorAbi from "../abi/Distributor"
 
 if (!process.env.RPC_URL) throw new Error("RPC_URL env var must be defined")
 if (!process.env.BATCH_SIZE) throw new Error("BATCH_SIZE env var must be defined")
@@ -23,8 +26,14 @@ export const TaopadContract = {
     address: "0x5483DC6abDA5F094865120B2D251b5744fc2ECB5" as `0x${string}`,
 }
 
+// distributor contract.
+export const DistributorContract = {
+    abi: DistributorAbi,
+    address: "0xcc79E3C699572f3b90cB3b13E48F5237FeabDD3F" as `0x${string}`
+}
+
 // distribution are allowed only on those chains.
-export const chains = [mainnet, arbitrum]
+export const chains = [mainnet, arbitrum, testnet]
 
 export const chainIds = chains.map(c => c.id)
 

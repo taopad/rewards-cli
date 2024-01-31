@@ -5,7 +5,7 @@ import { chainIds, selectChain } from "../config"
 import { Snapshot, RewardMap, Distribution, DistributionResult, DistributionProof } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getDistributions, saveDistribution, disconnect } from "./lib/storage"
-import { formatAmount } from "./lib/blockchain"
+import { formatAmount, getRoot } from "./lib/blockchain"
 
 const shareFilter = (share: { isContract: boolean, isBlacklisted: boolean }) => !share.isContract && !share.isBlacklisted
 
@@ -114,6 +114,18 @@ const hasDistributionAfter = (blockNumber: bigint, distributions: Distribution[]
     return distributions.filter(d => d.blockNumber >= blockNumber).length > 0
 }
 
+const isLastDistributionUpdated = async (chainId: number, token: `0x${string}`, distributions: Distribution[]) => {
+    const last = distributions.sort((a, b) => Number(b.blockNumber - a.blockNumber)).shift()
+
+    if (last === undefined) {
+        return true
+    }
+
+    const root = await getRoot(chainId, token)
+
+    return root === last.root
+}
+
 const distribute = async () => {
     // 10000 USDC on ethereum
     // 1 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 10000
@@ -136,6 +148,11 @@ const distribute = async () => {
 
     if (hasDistributionAfter(blockNumber, distributions)) {
         throw new Error(`distribution already exists after or equal block ${blockNumber}`)
+    }
+
+    // ensure distributor is updated with last distribution.
+    if (!await isLastDistributionUpdated(chainId, token, distributions)) {
+        throw new Error(`last distribution not updated for ${chainId} ${token}`)
     }
 
     // compute and save the distribution.
