@@ -183,19 +183,11 @@ ALTER TABLE ONLY public.distributions_proofs
 
 
 --
--- Name: distributions_proofs distributions_proofs_snapshots_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.distributions_proofs
-    ADD CONSTRAINT distributions_proofs_snapshots_fk FOREIGN KEY (block_number, address) REFERENCES public.snapshots(block_number, address);
-
-
---
--- Name: whitelists_proofs whitelists_proofs_snapshots_block_number_address_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: whitelists_proofs whitelists_proofs_snapshots_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_snapshots_block_number_address_fk FOREIGN KEY (block_number, address) REFERENCES public.snapshots(block_number, address);
+    ADD CONSTRAINT whitelists_proofs_snapshots_fk FOREIGN KEY (block_number, address) REFERENCES public.snapshots(block_number, address);
 
 
 --

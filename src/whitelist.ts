@@ -2,7 +2,7 @@ import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { Snapshot, Whitelist, WhitelistResult, WhitelistProof } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
-import { getWhitelists, saveWhitelist, disconnect } from "./lib/storage"
+import { getWhitelist, saveWhitelist, disconnect } from "./lib/storage"
 import { snapshotToHolderMap } from "./lib/utils"
 
 const createWhitelist = (minAmount: bigint, snapshot: Snapshot): WhitelistResult => {
@@ -63,10 +63,6 @@ const getBlockNumber = async (blockNumber: bigint | undefined) => {
     return blockNumber
 }
 
-const hasWhitelistAt = (blockNumber: bigint, whitelists: Whitelist[]) => {
-    return whitelists.filter(w => w.blockNumber === blockNumber).length > 0
-}
-
 const whitelist = async () => {
     // parse input.
     const minAmount = BigInt(parseMinAmount()) * 10n ** 18n
@@ -79,18 +75,16 @@ const whitelist = async () => {
         throw new Error(`no snapshot for block ${blockNumber}`)
     }
 
-    // ensure theres no whitelist at this block.
-    const whitelists = await getWhitelists();
-
-    if (hasWhitelistAt(blockNumber, whitelists)) {
-        throw new Error(`whitelist already exists at block ${blockNumber}`)
+    // ensure theres no whitelist at this block and min amount.
+    if (await getWhitelist(blockNumber, minAmount) !== null) {
+        throw new Error(`whitelist already exists at block ${blockNumber} for ${minAmount}`)
     }
 
     const whitelist = createWhitelist(minAmount, snapshot)
 
     saveWhitelist(blockNumber, minAmount, whitelist)
 
-    console.log(`${blockNumber} ${whitelist.root}`)
+    console.log(`${blockNumber}, ${minAmount}, ${whitelist.root}`)
 }
 
 whitelist()

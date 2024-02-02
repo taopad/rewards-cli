@@ -184,26 +184,19 @@ export const getLastRewardMap = async (chainId: number, token: `0x${string}`): P
 // whitelist data.
 // =============================================================================
 
-type WhitelistLineDb = {
-    block_number: bigint
-    min_amount: string
-    root: string
-}
+export const getWhitelist = async (blockNumber: bigint, minAmount: bigint): Promise<Whitelist | null> => {
+    const result = await prisma.whitelists.findFirst({
+        where: {
+            block_number: blockNumber,
+            min_amount: minAmount.toString(),
+        }
+    })
 
-type WhitelistDb = WhitelistLineDb[]
-
-const parseWhitelists = (whitelists: WhitelistDb): Whitelist[] => {
-    return whitelists.map(line => ({
-        blockNumber: line.block_number,
-        minAmount: BigInt(line.min_amount),
-        root: line.root,
-    }))
-}
-
-export const getWhitelists = async (): Promise<Whitelist[]> => {
-    const results = await prisma.whitelists.findMany()
-
-    return parseWhitelists(results)
+    return result === null ? null : {
+        blockNumber: result.block_number,
+        minAmount: BigInt(result.min_amount),
+        root: result.root,
+    }
 }
 
 export const saveWhitelist = async (
@@ -222,6 +215,7 @@ export const saveWhitelist = async (
         prisma.whitelists_proofs.createMany({
             data: whitelist.proofs.map(proof => ({
                 block_number: blockNumber,
+                min_amount: minAmount.toString(),
                 address: proof[0],
                 balance: proof[1].toString(),
                 proofs: proof[2],

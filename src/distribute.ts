@@ -164,7 +164,7 @@ const distribute = async () => {
 
     // output values to send.
     console.log(`updateRoot(${token}, ${distribution.totalRewards}, ${distribution.root})`)
-    console.log(`${token} ${distribution.totalRewards} ${distribution.root}`)
+    console.log(`${token}, ${distribution.totalRewards}, ${distribution.root}`)
 }
 
 distribute()
