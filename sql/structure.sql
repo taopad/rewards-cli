@@ -78,6 +78,7 @@ CREATE TABLE public.whitelists (
 
 CREATE TABLE public.whitelists_proofs (
     block_number bigint NOT NULL,
+    min_amount character varying NOT NULL,
     address character(42) NOT NULL,
     balance character varying NOT NULL,
     proofs character(66)[] NOT NULL
@@ -113,7 +114,7 @@ ALTER TABLE ONLY public.snapshots
 --
 
 ALTER TABLE ONLY public.whitelists
-    ADD CONSTRAINT whitelists_pk PRIMARY KEY (block_number);
+    ADD CONSTRAINT whitelists_pk PRIMARY KEY (block_number, min_amount);
 
 
 --
@@ -121,7 +122,7 @@ ALTER TABLE ONLY public.whitelists
 --
 
 ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (block_number, address);
+    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (block_number, min_amount, address);
 
 
 --
@@ -171,6 +172,38 @@ CREATE INDEX snapshots_address_index ON public.snapshots USING btree (address);
 --
 
 CREATE INDEX whitelists_proofs_address_index ON public.whitelists_proofs USING btree (address);
+
+
+--
+-- Name: distributions_proofs distributions_proofs_distributions_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.distributions_proofs
+    ADD CONSTRAINT distributions_proofs_distributions_fk FOREIGN KEY (chain_id, token, block_number) REFERENCES public.distributions(chain_id, token, block_number);
+
+
+--
+-- Name: distributions_proofs distributions_proofs_snapshots_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.distributions_proofs
+    ADD CONSTRAINT distributions_proofs_snapshots_fk FOREIGN KEY (block_number, address) REFERENCES public.snapshots(block_number, address);
+
+
+--
+-- Name: whitelists_proofs whitelists_proofs_snapshots_block_number_address_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whitelists_proofs
+    ADD CONSTRAINT whitelists_proofs_snapshots_block_number_address_fk FOREIGN KEY (block_number, address) REFERENCES public.snapshots(block_number, address);
+
+
+--
+-- Name: whitelists_proofs whitelists_proofs_whitelists_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.whitelists_proofs
+    ADD CONSTRAINT whitelists_proofs_whitelists_fk FOREIGN KEY (block_number, min_amount) REFERENCES public.whitelists(block_number, min_amount);
 
 
 --

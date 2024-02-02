@@ -9,12 +9,13 @@ datasource db {
 }
 
 model distributions {
-  chain_id      Int
-  token         String @db.Char(42)
-  block_number  BigInt
-  total_shares  String @db.VarChar
-  total_rewards String @db.VarChar
-  root          String @db.Char(66)
+  chain_id             Int
+  token                String                 @db.Char(42)
+  block_number         BigInt
+  total_shares         String                 @db.VarChar
+  total_rewards        String                 @db.VarChar
+  root                 String                 @db.Char(66)
+  distributions_proofs distributions_proofs[]
 
   @@id([chain_id, token, block_number], map: "distributions_pk")
   @@index([token], map: "distributions_token_index")
@@ -22,23 +23,27 @@ model distributions {
 }
 
 model snapshots {
-  block_number   BigInt
-  address        String  @db.Char(42)
-  balance        String  @db.VarChar
-  is_contract    Boolean
-  is_blacklisted Boolean
+  block_number         BigInt
+  address              String                 @db.Char(42)
+  balance              String                 @db.VarChar
+  is_contract          Boolean
+  is_blacklisted       Boolean
+  distributions_proofs distributions_proofs[]
+  whitelists_proofs    whitelists_proofs[]
 
   @@id([block_number, address], map: "snapshots_pk")
   @@index([address], map: "snapshots_address_index")
 }
 
 model distributions_proofs {
-  chain_id     Int
-  token        String   @db.Char(42)
-  block_number BigInt
-  address      String   @db.Char(42)
-  amount       String   @db.VarChar
-  proofs       String[] @db.Char(66)
+  chain_id      Int
+  token         String        @db.Char(42)
+  block_number  BigInt
+  address       String        @db.Char(42)
+  amount        String        @db.VarChar
+  proofs        String[]      @db.Char(66)
+  distributions distributions @relation(fields: [chain_id, token, block_number], references: [chain_id, token, block_number], onDelete: NoAction, onUpdate: NoAction, map: "distributions_proofs_distributions_fk")
+  snapshots     snapshots     @relation(fields: [block_number, address], references: [block_number, address], onDelete: NoAction, onUpdate: NoAction, map: "distributions_proofs_snapshots_fk")
 
   @@id([chain_id, token, block_number, address], map: "distributions_proofs_pk")
   @@index([address], map: "distributions_proofs_address_index")
@@ -47,17 +52,23 @@ model distributions_proofs {
 }
 
 model whitelists {
-  block_number BigInt @id(map: "whitelists_pk")
-  min_amount   String @db.VarChar
-  root         String @db.Char(66)
+  block_number      BigInt
+  min_amount        String              @db.VarChar
+  root              String              @db.Char(66)
+  whitelists_proofs whitelists_proofs[]
+
+  @@id([block_number, min_amount], map: "whitelists_pk")
 }
 
 model whitelists_proofs {
   block_number BigInt
-  address      String   @db.Char(42)
-  balance      String   @db.VarChar
-  proofs       String[] @db.Char(66)
+  min_amount   String     @db.VarChar
+  address      String     @db.Char(42)
+  balance      String     @db.VarChar
+  proofs       String[]   @db.Char(66)
+  snapshots    snapshots  @relation(fields: [block_number, address], references: [block_number, address], onDelete: NoAction, onUpdate: NoAction, map: "whitelists_proofs_snapshots_block_number_address_fk")
+  whitelists   whitelists @relation(fields: [block_number, min_amount], references: [block_number, min_amount], onDelete: NoAction, onUpdate: NoAction, map: "whitelists_proofs_whitelists_fk")
 
-  @@id([block_number, address], map: "whitelists_proofs_pk")
+  @@id([block_number, min_amount, address], map: "whitelists_proofs_pk")
   @@index([address], map: "whitelists_proofs_address_index")
 }
