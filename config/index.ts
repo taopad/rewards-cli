@@ -2,7 +2,6 @@ import "dotenv/config"
 
 import { createPublicClient, http } from "viem"
 import { mainnet, arbitrum } from "viem/chains"
-import { testnet } from "./testnet"
 
 import TaopadAbi from "../abi/Taopad"
 import DistributorAbi from "../abi/Distributor"
@@ -33,7 +32,7 @@ export const DistributorContract = {
 }
 
 // distribution are allowed only on those chains.
-export const chains = [mainnet, arbitrum, testnet]
+export const chains = [mainnet, arbitrum]
 
 export const chainIds = chains.map(c => c.id)
 
