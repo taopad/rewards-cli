@@ -104,6 +104,46 @@ const parseDistributions = (distributions: DistributionDb): Distribution[] => {
     }))
 }
 
+const getLastDistributionBlockNumber = async (chainId: number, token: `0x${string}`) => {
+    const results = await prisma.distributions.aggregate({
+        _max: {
+            block_number: true
+        },
+        where: { chain_id: chainId, token }
+    })
+
+    return results._max.block_number
+}
+
+export const getLastDistribution = async (chainId: number, token: `0x${string}`): Promise<Distribution | null> => {
+    const blockNumber = await getLastDistributionBlockNumber(chainId, token)
+
+    if (blockNumber == null) {
+        return null
+    }
+
+    const result = await prisma.distributions.findFirst({
+        where: {
+            chain_id: chainId,
+            token: token,
+            block_number: blockNumber,
+        },
+    })
+
+    if (result == null) {
+        return null
+    }
+
+    return {
+        chainId: result.chain_id,
+        token: result.token,
+        blockNumber: result.block_number,
+        totalShares: BigInt(result.total_shares),
+        totalRewards: BigInt(result.total_rewards),
+        root: result.root,
+    }
+}
+
 export const getDistributions = async (chainId: number, token: `0x${string}`): Promise<Distribution[]> => {
     const results = await prisma.distributions.findMany({
         where: {
@@ -144,17 +184,6 @@ export const saveDistribution = async (
             }))
         })
     ])
-}
-
-const getLastDistributionBlockNumber = async (chainId: number, token: `0x${string}`) => {
-    const results = await prisma.distributions.aggregate({
-        _max: {
-            block_number: true
-        },
-        where: { chain_id: chainId, token }
-    })
-
-    return results._max.block_number
 }
 
 export const getLastRewardMap = async (chainId: number, token: `0x${string}`): Promise<RewardMap> => {

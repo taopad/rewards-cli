@@ -4,7 +4,7 @@ import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 import { chainIds, selectChain } from "../config"
 import { Snapshot, RewardMap, Distribution, DistributionResult, RewardItem } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
-import { getLastRewardMap, getDistributions, saveDistribution, disconnect } from "./lib/storage"
+import { getLastRewardMap, getLastDistribution, saveDistribution, disconnect } from "./lib/storage"
 import { getOperator, getRoot, formatAmount } from "./lib/blockchain"
 
 const shareMapper = (share: { balance: bigint }) => share.balance
@@ -45,7 +45,7 @@ const getDistributionResult = async (rewardAmount: bigint, rewardMap: RewardMap,
     for (const [i, [address, amount]] of tree.entries()) {
         list.push({
             address: address,
-            balance: balanceMap[address],
+            balance: balanceMap[address] ?? 0n,
             amount: amount,
             proof: tree.getProof(i),
         });
@@ -123,22 +123,6 @@ const getBlockNumber = async (blockNumber: bigint | undefined) => {
     return blockNumber
 }
 
-const hasDistributionAfter = (blockNumber: bigint, distributions: Distribution[]) => {
-    return distributions.filter(d => d.blockNumber >= blockNumber).length > 0
-}
-
-const isLastDistributionUpdated = async (chainId: number, token: `0x${string}`, distributions: Distribution[]) => {
-    const last = distributions.sort((a, b) => Number(b.blockNumber - a.blockNumber)).shift()
-
-    if (last === undefined) {
-        return true
-    }
-
-    const root = await getRoot(chainId, token)
-
-    return root === last.root
-}
-
 const distribute = async () => {
     // 10000 USDC on ethereum
     // 1 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 10000
@@ -157,15 +141,10 @@ const distribute = async () => {
     }
 
     // ensure theres no more recent distribution for this token on this chain.
-    const distributions = await getDistributions(chainId, token)
+    const lastDistribution = await getLastDistribution(chainId, token)
 
-    if (hasDistributionAfter(blockNumber, distributions)) {
-        throw new Error(`distribution already exists after or equal block ${blockNumber}`)
-    }
-
-    // ensure distributor is updated with last distribution.
-    if (!await isLastDistributionUpdated(chainId, token, distributions)) {
-        throw new Error(`last distribution not updated for ${chainId} ${token}`)
+    if (lastDistribution != null && lastDistribution.blockNumber >= blockNumber) {
+        throw new Error(`distribution already exists for ${lastDistribution.blockNumber}`)
     }
 
     // compute and save the distribution.
@@ -174,10 +153,6 @@ const distribute = async () => {
     const distribution = await getDistributionResult(rewardAmount, rewardMap, snapshot)
 
     saveDistribution(chainId, token, blockNumber, distribution)
-
-    // output values to send.
-    console.log(`updateRoot(${token}, ${distribution.totalRewards}, ${distribution.root})`)
-    console.log(`${token}, ${distribution.totalRewards}, ${distribution.root}`)
 }
 
 distribute()

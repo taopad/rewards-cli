@@ -7,6 +7,7 @@
     "snapshot": "npx ts-node ./src/snapshot.ts",
     "distribute": "npx ts-node ./src/distribute.ts",
     "whitelist": "npx ts-node ./src/whitelist.ts",
+    "pending": "npx ts-node ./src/pending.ts",
     "verify": "npx ts-node ./src/verify.ts"
   },
   "author": "",
