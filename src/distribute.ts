@@ -153,6 +153,8 @@ const distribute = async () => {
     const distribution = await getDistributionResult(rewardAmount, rewardMap, snapshot)
 
     saveDistribution(chainId, token, blockNumber, distribution)
+
+    console.log(`npm run pending ${chainId} ${token} to display values to send to the contract`)
 }
 
 distribute()

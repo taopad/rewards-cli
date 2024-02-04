@@ -38,35 +38,46 @@ const parseTokenAddress = (): `0x${string}` => {
     return token
 }
 
+const tryToGetRoot = async (chainId: number, token: `0x${string}`) => {
+    try {
+        return await getRoot(chainId, token)
+    } catch (e: any) {
+        return null
+    }
+}
+
 const pending = async () => {
     // parse input.
     const chainId = parseChainId()
     const token = parseTokenAddress()
 
     // get current root.
-    const root = await getRoot(chainId, token)
+    const root = await tryToGetRoot(chainId, token)
 
     // get all the distributions.
     const distributions = await getDistributions(chainId, token)
 
-    // get pending distributions.
-    let found = false
-    let lastRoot = ""
-    let amount = 0n
-
-    for (const distribution of distributions) {
-        lastRoot = distribution.root
-
-        if (found) {
-            amount += distribution.totalRewards
-        }
-
-        if (distribution.root === root) {
-            found = true
-        }
+    // nothing to update when no distribution.
+    if (distributions.length === 0) {
+        throw new Error(`no distribution for ${chainId}, ${token}`)
     }
 
-    console.log(`updateRoot(${token}, ${amount}, ${root})`)
+    // get the block number of the distribution with the current root.
+    const current = distributions.filter(d => d.root === root).shift()
+
+    const blockNumber = current === undefined ? 0n : current.blockNumber
+
+    // get all distributions after this block number.
+    const pending = distributions.filter(d => d.blockNumber > blockNumber)
+
+    // get the total amount of rewards to send.
+    const total = pending.map(d => d.totalRewards).reduce((t, c) => t + c)
+
+    // order by most recent block number.
+    const sorted = pending.sort((a, b) => Number(b.blockNumber - a.blockNumber))
+
+    // log it to admin.
+    console.log(`updateRoot(${token}, ${total}, ${sorted[0].root})`)
 }
 
 pending()
