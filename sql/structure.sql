@@ -43,8 +43,9 @@ CREATE TABLE public.distributions_proofs (
     token character(42) NOT NULL,
     block_number bigint NOT NULL,
     address character(42) NOT NULL,
+    balance character varying NOT NULL,
     amount character varying NOT NULL,
-    proofs character(66)[] NOT NULL
+    proof character(66)[] NOT NULL
 );
 
 
@@ -81,7 +82,7 @@ CREATE TABLE public.whitelists_proofs (
     min_amount character varying NOT NULL,
     address character(42) NOT NULL,
     balance character varying NOT NULL,
-    proofs character(66)[] NOT NULL
+    proof character(66)[] NOT NULL
 );
 
 
@@ -201,4 +202,3 @@ ALTER TABLE ONLY public.whitelists_proofs
 --
 -- PostgreSQL database dump complete
 --
-

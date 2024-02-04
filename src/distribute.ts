@@ -2,7 +2,7 @@ import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { chainIds, selectChain } from "../config"
-import { Snapshot, RewardMap, Distribution, DistributionResult, DistributionProof } from "./types"
+import { Snapshot, RewardMap, Distribution, DistributionResult, RewardItem } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getDistributions, saveDistribution, disconnect } from "./lib/storage"
 import { formatAmount, getRoot } from "./lib/blockchain"
@@ -14,6 +14,8 @@ const shareMapper = (share: { balance: bigint }) => share.balance
 const shareReducer = (acc: bigint, current: bigint) => acc + current
 
 const getDistributionResult = (rewardAmount: bigint, rewardMap: RewardMap, snapshot: Snapshot): DistributionResult => {
+    const balanceMap: Record<string, bigint> = {}
+
     const shares = snapshot.filter(shareFilter)
 
     const totalShares = shares.map(shareMapper).reduce(shareReducer)
@@ -24,6 +26,7 @@ const getDistributionResult = (rewardAmount: bigint, rewardMap: RewardMap, snaps
         const rewards = (balance * rewardAmount) / totalShares
 
         totalRewards += rewards
+        balanceMap[address] = balance
 
         if (rewards > 0) {
             rewardMap[address] = (rewardMap[address] ?? 0n) + rewards
@@ -32,13 +35,18 @@ const getDistributionResult = (rewardAmount: bigint, rewardMap: RewardMap, snaps
 
     const tree = StandardMerkleTree.of(Object.entries(rewardMap), ["address", "uint256"])
 
-    const proofs: DistributionProof[] = []
+    const list: RewardItem[] = []
 
-    for (const [i, v] of tree.entries()) {
-        proofs.push([...v, tree.getProof(i)]);
+    for (const [i, [address, amount]] of tree.entries()) {
+        list.push({
+            address: address,
+            balance: balanceMap[address],
+            amount: amount,
+            proof: tree.getProof(i),
+        });
     }
 
-    return { totalShares, totalRewards, root: tree.root, proofs }
+    return { totalShares, totalRewards, root: tree.root, list }
 }
 
 const parseChainId = (): number => {

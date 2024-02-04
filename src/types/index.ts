@@ -31,10 +31,15 @@ export type DistributionResult = {
     totalShares: bigint
     totalRewards: bigint
     root: string
-    proofs: DistributionProof[]
+    list: RewardItem[]
 }
 
-export type DistributionProof = [string, bigint, string[]]
+export type RewardItem = {
+    address: string,
+    balance: bigint,
+    amount: bigint,
+    proof: string[],
+}
 
 export type Whitelist = {
     blockNumber: bigint
@@ -44,7 +49,11 @@ export type Whitelist = {
 
 export type WhitelistResult = {
     root: string
-    proofs: WhitelistProof[]
+    list: WhitelistItem[]
 }
 
-export type WhitelistProof = [string, bigint, string[]]
+export type WhitelistItem = {
+    address: string,
+    balance: bigint,
+    proof: string[],
+}

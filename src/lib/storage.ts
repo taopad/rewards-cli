@@ -133,13 +133,14 @@ export const saveDistribution = async (
             }
         }),
         prisma.distributions_proofs.createMany({
-            data: distribution.proofs.map(proof => ({
+            data: distribution.list.map(item => ({
                 token,
                 chain_id: chainId,
                 block_number: blockNumber,
-                address: proof[0],
-                amount: proof[1].toString(),
-                proofs: proof[2],
+                address: item.address,
+                balance: item.balance.toString(),
+                amount: item.amount.toString(),
+                proof: item.proof,
             }))
         })
     ])
@@ -213,12 +214,12 @@ export const saveWhitelist = async (
             }
         }),
         prisma.whitelists_proofs.createMany({
-            data: whitelist.proofs.map(proof => ({
+            data: whitelist.list.map(item => ({
                 block_number: blockNumber,
                 min_amount: minAmount.toString(),
-                address: proof[0],
-                balance: proof[1].toString(),
-                proofs: proof[2],
+                address: item.address,
+                balance: item.balance.toString(),
+                proof: item.proof,
             }))
         })
     ])

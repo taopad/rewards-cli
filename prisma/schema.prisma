@@ -39,8 +39,9 @@ model distributions_proofs {
   token         String        @db.Char(42)
   block_number  BigInt
   address       String        @db.Char(42)
+  balance       String        @db.VarChar
   amount        String        @db.VarChar
-  proofs        String[]      @db.Char(66)
+  proof         String[]      @db.Char(66)
   distributions distributions @relation(fields: [chain_id, token, block_number], references: [chain_id, token, block_number], onDelete: NoAction, onUpdate: NoAction, map: "distributions_proofs_distributions_fk")
 
   @@id([chain_id, token, block_number, address], map: "distributions_proofs_pk")
@@ -63,7 +64,7 @@ model whitelists_proofs {
   min_amount   String     @db.VarChar
   address      String     @db.Char(42)
   balance      String     @db.VarChar
-  proofs       String[]   @db.Char(66)
+  proof        String[]   @db.Char(66)
   snapshots    snapshots  @relation(fields: [block_number, address], references: [block_number, address], onDelete: NoAction, onUpdate: NoAction, map: "whitelists_proofs_snapshots_fk")
   whitelists   whitelists @relation(fields: [block_number, min_amount], references: [block_number, min_amount], onDelete: NoAction, onUpdate: NoAction, map: "whitelists_proofs_whitelists_fk")
 
