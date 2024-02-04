@@ -51,6 +51,13 @@ export const getHolderInfo = async (blockNumber: bigint, address: `0x${string}`)
     return { balance, isContract, isBlacklisted }
 }
 
+export const getOperator = async (): Promise<string> => {
+    return await publicClient.readContract({
+        ...TaopadContract,
+        functionName: "operator",
+    })
+}
+
 export const getRoot = async (chainId: number, token: `0x${string}`): Promise<string> => {
     const publicClient = publicClientFactory(chainId)
 

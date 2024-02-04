@@ -5,22 +5,27 @@ import { chainIds, selectChain } from "../config"
 import { Snapshot, RewardMap, Distribution, DistributionResult, RewardItem } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getDistributions, saveDistribution, disconnect } from "./lib/storage"
-import { formatAmount, getRoot } from "./lib/blockchain"
-
-const shareFilter = (share: { isContract: boolean, isBlacklisted: boolean }) => !share.isContract && !share.isBlacklisted
+import { getOperator, getRoot, formatAmount } from "./lib/blockchain"
 
 const shareMapper = (share: { balance: bigint }) => share.balance
 
 const shareReducer = (acc: bigint, current: bigint) => acc + current
 
-const getDistributionResult = (rewardAmount: bigint, rewardMap: RewardMap, snapshot: Snapshot): DistributionResult => {
-    const balanceMap: Record<string, bigint> = {}
+const getShareFilter = async () => {
+    const operator = await getOperator()
 
-    const shares = snapshot.filter(shareFilter)
+    return (share: { address: string, isContract: boolean, isBlacklisted: boolean }) => {
+        return share.address !== operator && !share.isContract && !share.isBlacklisted
+    }
+}
+
+const getDistributionResult = async (rewardAmount: bigint, rewardMap: RewardMap, snapshot: Snapshot): Promise<DistributionResult> => {
+    const shares = snapshot.filter(await getShareFilter())
 
     const totalShares = shares.map(shareMapper).reduce(shareReducer)
 
     let totalRewards = 0n
+    const balanceMap: Record<string, bigint> = {}
 
     for (const { address, balance } of shares) {
         const rewards = (balance * rewardAmount) / totalShares
@@ -166,7 +171,7 @@ const distribute = async () => {
     // compute and save the distribution.
     const rewardMap = await getLastRewardMap(chainId, token)
 
-    const distribution = getDistributionResult(rewardAmount, rewardMap, snapshot)
+    const distribution = await getDistributionResult(rewardAmount, rewardMap, snapshot)
 
     saveDistribution(chainId, token, blockNumber, distribution)
 
