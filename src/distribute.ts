@@ -2,10 +2,10 @@ import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { chainIds, selectChain } from "../config"
-import { Snapshot, RewardMap, Distribution, DistributionResult, RewardItem } from "./types"
+import { Snapshot, RewardMap, DistributionResult, RewardItem } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getLastDistribution, saveDistribution, disconnect } from "./lib/storage"
-import { getOperator, getRoot, formatAmount } from "./lib/blockchain"
+import { getOperator, formatAmount } from "./lib/blockchain"
 
 const shareMapper = (share: { balance: bigint }) => share.balance
 
