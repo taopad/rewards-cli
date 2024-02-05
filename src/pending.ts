@@ -1,6 +1,5 @@
 import { isAddress } from "viem"
 
-import { chainIds, selectChain } from "../config"
 import { getRoot } from "./lib/blockchain"
 import { getDistributions, disconnect } from "./lib/storage"
 
@@ -13,12 +12,6 @@ const parseChainId = (): number => {
 
     if (isNaN(chainId)) {
         throw new Error("chain_id must be parsable as number")
-    }
-
-    const chain = selectChain(chainId)
-
-    if (chain === undefined) {
-        throw new Error(`chain_id must be one of [${chainIds.join(", ")}]`)
     }
 
     return chainId

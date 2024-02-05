@@ -33,18 +33,16 @@ const getWhitelistResult = (minAmount: bigint, snapshot: Snapshot): WhitelistRes
     return { root: tree.root, list }
 }
 
-const parseMinAmount = (): number => {
+const parseMinAmount = (): bigint => {
     if (process.argv.length < 3) {
         throw new Error("min_amount is required [min_amount, block_number?]")
     }
 
-    const rewardAmount = parseInt(process.argv[2])
-
-    if (isNaN(rewardAmount)) {
-        throw new Error("min_amount must be parsable as number")
+    try {
+        return BigInt(process.argv[2])
+    } catch (e: any) {
+        throw new Error("min_amount must be parsable as bigint")
     }
-
-    return rewardAmount
 }
 
 const parseOptionalBlockNumber = (): bigint | undefined => {
@@ -69,7 +67,7 @@ const getBlockNumber = async (blockNumber: bigint | undefined) => {
 
 const whitelist = async () => {
     // parse input.
-    const minAmount = BigInt(parseMinAmount()) * 10n ** 18n
+    const minAmount = parseMinAmount()
     const blockNumber = await getBlockNumber(parseOptionalBlockNumber())
 
     // ensure theres a snapshot for this block number.

@@ -32,11 +32,11 @@ export const DistributorContract = {
 }
 
 // distribution are allowed only on those chains.
-export const chains = [mainnet, arbitrum]
+const chains = [mainnet, arbitrum]
 
-export const chainIds = chains.map(c => c.id)
+const chainIds = chains.map(c => c.id)
 
-export const selectChain = (chainId: number) => chains.filter(c => c.id === chainId).shift()
+const selectChain = (chainId: number) => chains.filter(c => c.id === chainId).shift()
 
 export const publicClientFactory = (chainId: number) => {
     if (chainId === 1) {

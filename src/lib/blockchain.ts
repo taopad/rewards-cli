@@ -67,29 +67,3 @@ export const getRoot = async (chainId: number, token: `0x${string}`): Promise<st
         args: [token],
     })
 }
-
-export const formatAmount = async (chainId: number, token: `0x${string}`, amount: number): Promise<bigint> => {
-    const publicClient = publicClientFactory(chainId)
-
-    const decimals = await publicClient.readContract({
-        address: token,
-        abi: [
-            {
-                "inputs": [],
-                "name": "decimals",
-                "outputs": [
-                    {
-                        "internalType": "uint8",
-                        "name": "",
-                        "type": "uint8"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-        ] as const,
-        functionName: "decimals",
-    })
-
-    return BigInt(amount) * (10n ** BigInt(decimals))
-}

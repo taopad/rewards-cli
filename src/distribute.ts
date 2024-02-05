@@ -1,11 +1,10 @@
 import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
-import { chainIds, selectChain } from "../config"
-import { Snapshot, RewardMap, DistributionResult, RewardItem } from "./types"
+import { getOperator } from "./lib/blockchain"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getLastDistribution, saveDistribution, disconnect } from "./lib/storage"
-import { getOperator, formatAmount } from "./lib/blockchain"
+import { Snapshot, RewardMap, DistributionResult, RewardItem } from "./types"
 
 const shareMapper = (share: { balance: bigint }) => share.balance
 
@@ -65,12 +64,6 @@ const parseChainId = (): number => {
         throw new Error("chain_id must be parsable as number")
     }
 
-    const chain = selectChain(chainId)
-
-    if (chain === undefined) {
-        throw new Error(`chain_id must be one of [${chainIds.join(", ")}]`)
-    }
-
     return chainId
 }
 
@@ -88,18 +81,16 @@ const parseTokenAddress = (): `0x${string}` => {
     return token
 }
 
-const parseRewardAmount = (): number => {
+const parseRewardAmount = (): bigint => {
     if (process.argv.length < 5) {
         throw new Error("reward_amount is required [chain_id, token_address, reward_amount, block_number?]")
     }
 
-    const rewardAmount = parseInt(process.argv[4])
-
-    if (isNaN(rewardAmount)) {
-        throw new Error("reward_amount must be parsable as number")
+    try {
+        return BigInt(process.argv[4])
+    } catch (e: any) {
+        throw new Error("reward_amount must be parsable as bigint")
     }
-
-    return rewardAmount
 }
 
 const parseOptionalBlockNumber = (): bigint | undefined => {
@@ -130,7 +121,7 @@ const distribute = async () => {
     // parse input.
     const chainId = parseChainId()
     const token = parseTokenAddress()
-    const rewardAmount = await formatAmount(chainId, token, parseRewardAmount())
+    const rewardAmount = parseRewardAmount()
     const blockNumber = await getBlockNumber(parseOptionalBlockNumber())
 
     // ensure theres a snapshot for this block number.
