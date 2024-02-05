@@ -8,7 +8,8 @@
     "distribute": "npx ts-node ./src/distribute.ts",
     "whitelist": "npx ts-node ./src/whitelist.ts",
     "pending": "npx ts-node ./src/pending.ts",
-    "verify": "npx ts-node ./src/verify.ts"
+    "verify": "npx ts-node ./src/verify.ts",
+    "check": "npx ts-node ./src/check.ts"
   },
   "author": "",
   "license": "ISC",
