@@ -6,7 +6,7 @@ import { getDistributions, disconnect } from "./lib/storage"
 
 const parseChainId = (): number => {
     if (process.argv.length < 3) {
-        throw new Error("chain id is required [chain_id, token_address, reward_amount, block_number?]")
+        throw new Error("chain id is required [chain_id, token_address]")
     }
 
     const chainId = parseInt(process.argv[2])
@@ -26,7 +26,7 @@ const parseChainId = (): number => {
 
 const parseTokenAddress = (): `0x${string}` => {
     if (process.argv.length < 4) {
-        throw new Error("token address is required [chain_id, token_address, reward_amount, block_number?]")
+        throw new Error("token address is required [chain_id, token_address]")
     }
 
     const token = process.argv[3]
