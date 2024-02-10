@@ -1,19 +1,21 @@
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
+import { getIsExcluded } from "../config"
 import { Snapshot, WhitelistResult, WhitelistItem } from "./types"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getWhitelist, saveWhitelist, disconnect } from "./lib/storage"
 import { snapshotToHolderMap } from "./lib/utils"
 
-const getWhitelistResult = (minAmount: bigint, snapshot: Snapshot): WhitelistResult => {
+const getWhitelistResult = async (minAmount: bigint, snapshot: Snapshot): Promise<WhitelistResult> => {
     const holderMap = snapshotToHolderMap(snapshot)
 
     const addresses: [string][] = []
+    const isExcluded = await getIsExcluded()
 
     for (const address in holderMap) {
         const holder = holderMap[address]
 
-        if (!holder.isContract && !holder.isBlacklisted && holder.balance >= minAmount) {
+        if (!isExcluded(address) && !holder.isBlacklisted && holder.balance >= minAmount) {
             addresses.push([address])
         }
     }
@@ -82,7 +84,7 @@ const whitelist = async () => {
         throw new Error(`whitelist already exists at block ${blockNumber} for ${minAmount}`)
     }
 
-    const whitelist = getWhitelistResult(minAmount, snapshot)
+    const whitelist = await getWhitelistResult(minAmount, snapshot)
 
     saveWhitelist(blockNumber, minAmount, whitelist)
 

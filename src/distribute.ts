@@ -1,7 +1,7 @@
 import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
-import { getOperator } from "./lib/blockchain"
+import { getIsExcluded } from "../config"
 import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
 import { getLastRewardMap, getLastDistribution, saveDistribution, disconnect } from "./lib/storage"
 import { Snapshot, RewardMap, DistributionResult, RewardItem } from "./types"
@@ -11,10 +11,10 @@ const shareMapper = (share: { balance: bigint }) => share.balance
 const shareReducer = (acc: bigint, current: bigint) => acc + current
 
 const getShareFilter = async () => {
-    const operator = await getOperator()
+    const isExcluded = await getIsExcluded()
 
-    return (share: { address: string, isContract: boolean, isBlacklisted: boolean }) => {
-        return share.address !== operator && !share.isContract && !share.isBlacklisted
+    return (share: { address: string, isBlacklisted: boolean }) => {
+        return !isExcluded(share.address) && !share.isBlacklisted
     }
 }
 
