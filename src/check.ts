@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
-import { disconnect } from "./lib/storage"
+import { database } from "./lib/database"
 
 const prisma = new PrismaClient()
 
@@ -52,22 +52,20 @@ const getDistributionResults = async (chainId: number, token: string, blockNumbe
 const getWhitelists = async () => {
     return await prisma.whitelists.findMany({
         select: {
-            block_number: true,
-            min_amount: true,
+            launchpad: true,
             root: true,
         }
     })
 }
 
-const getWhitelistResults = async (blockNumber: bigint, amount: bigint) => {
+const getWhitelistResults = async (launchpad: string) => {
     return await prisma.whitelists_proofs.findMany({
         select: {
             address: true,
             proof: true,
         },
         where: {
-            block_number: { equals: blockNumber },
-            min_amount: { equals: amount.toString() },
+            launchpad: { equals: launchpad },
         }
     })
 }
@@ -128,8 +126,8 @@ const check = async () => {
         console.log("no whitelist to check")
     }
 
-    for (const { block_number, min_amount, root } of whitelists) {
-        const results = await getWhitelistResults(block_number, BigInt(min_amount))
+    for (const { launchpad, root } of whitelists) {
+        const results = await getWhitelistResults(launchpad)
 
         if (results.length === 0) {
             console.log("no whitelist result to check")
@@ -147,10 +145,10 @@ const check = async () => {
 
 check()
     .then(async () => {
-        await disconnect()
+        await database.disconnect()
     })
     .catch(async (e) => {
         console.error(e)
-        await disconnect()
+        await database.disconnect()
         process.exit(1)
     })

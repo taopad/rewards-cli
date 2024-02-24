@@ -1,57 +1,19 @@
 import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
-import { getIsExcluded } from "../config"
-import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
-import { getLastRewardMap, getLastDistribution, saveDistribution, disconnect } from "./lib/storage"
-import { Snapshot, RewardMap, DistributionResult, RewardItem } from "./types"
+import { graphql } from "./lib/graphql"
+import { database } from "./lib/database"
+import { getLastFinalizedBlockNumber } from "./lib/blockchain"
+import { Snapshot, RewardMap, DistributionItem } from "./types"
 
-const shareMapper = (share: { balance: bigint }) => share.balance
+export type DistributionTreeResult = {
+    totalShares: bigint
+    totalRewards: bigint
+    root: string
+    list: DistributionItem[]
+}
 
 const shareReducer = (acc: bigint, current: bigint) => acc + current
-
-const getShareFilter = async () => {
-    const isExcluded = await getIsExcluded()
-
-    return (share: { address: string, isBlacklisted: boolean }) => {
-        return !isExcluded(share.address) && !share.isBlacklisted
-    }
-}
-
-const getDistributionResult = async (rewardAmount: bigint, rewardMap: RewardMap, snapshot: Snapshot): Promise<DistributionResult> => {
-    const shares = snapshot.filter(await getShareFilter())
-
-    const totalShares = shares.map(shareMapper).reduce(shareReducer)
-
-    let totalRewards = 0n
-    const balanceMap: Record<string, bigint> = {}
-
-    for (const { address, balance } of shares) {
-        const rewards = (balance * rewardAmount) / totalShares
-
-        totalRewards += rewards
-        balanceMap[address] = balance
-
-        if (rewards > 0) {
-            rewardMap[address] = (rewardMap[address] ?? 0n) + rewards
-        }
-    }
-
-    const tree = StandardMerkleTree.of(Object.entries(rewardMap), ["address", "uint256"])
-
-    const list: RewardItem[] = []
-
-    for (const [i, [address, amount]] of tree.entries()) {
-        list.push({
-            address: address,
-            balance: balanceMap[address] ?? 0n,
-            amount: amount,
-            proof: tree.getProof(i),
-        });
-    }
-
-    return { totalShares, totalRewards, root: tree.root, list }
-}
 
 const parseChainId = (): number => {
     if (process.argv.length < 3) {
@@ -106,54 +68,91 @@ const parseOptionalBlockNumber = (): bigint | undefined => {
 
 }
 
-const getBlockNumber = async (blockNumber: bigint | undefined) => {
+const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
+    const lastFinalizedBlockNumber = await getLastFinalizedBlockNumber()
+
     if (blockNumber === undefined) {
-        return await getLastSnapshotBlockNumber()
+        return lastFinalizedBlockNumber
     }
 
-    return blockNumber
+    if (blockNumber <= lastFinalizedBlockNumber) {
+        return blockNumber
+    }
+
+    throw new Error("block number must be before last finalized block number")
+}
+
+const getDistributionTree = async (snapshot: Snapshot, rewardMap: RewardMap, rewardAmount: bigint): Promise<DistributionTreeResult> => {
+    let totalRewards = 0n
+    const totalShares = Object.values(snapshot).reduce(shareReducer)
+
+    for (const [address, balance] of Object.entries(snapshot)) {
+        const rewards = (balance * rewardAmount) / totalShares
+
+        totalRewards += rewards
+
+        if (rewards > 0) {
+            rewardMap[address] = (rewardMap[address] ?? 0n) + rewards
+        }
+    }
+
+    const list: DistributionItem[] = []
+
+    const tree = StandardMerkleTree.of(Object.entries(rewardMap), ["address", "uint256"])
+
+    for (const [i, [address, amount]] of tree.entries()) {
+        list.push({
+            address: address,
+            balance: snapshot[address] ?? 0n,
+            amount: amount,
+            proof: tree.getProof(i),
+        });
+    }
+
+    return { totalShares, totalRewards, root: tree.root, list }
 }
 
 const distribute = async () => {
-    // 10000 USDC on ethereum
-    // 1 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 10000
-
     // parse input.
     const chainId = parseChainId()
     const token = parseTokenAddress()
     const rewardAmount = parseRewardAmount()
-    const blockNumber = await getBlockNumber(parseOptionalBlockNumber())
-
-    // ensure theres a snapshot for this block number.
-    const snapshot = await getSnapshotAt(blockNumber)
-
-    if (snapshot.length === 0) {
-        throw new Error(`no snapshot for block ${blockNumber}`)
-    }
+    const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
 
     // ensure theres no more recent distribution for this token on this chain.
-    const lastDistribution = await getLastDistribution(chainId, token)
+    const lastDistribution = await database.distribution.getLast(chainId, token)
 
     if (lastDistribution != null && lastDistribution.blockNumber >= blockNumber) {
         throw new Error(`distribution already exists for ${lastDistribution.blockNumber}`)
     }
 
-    // compute and save the distribution.
-    const rewardMap = await getLastRewardMap(chainId, token)
+    // take the snapshot with the given block.
+    const snapshot = await graphql.snapshot(blockNumber, 0n)
 
-    const distribution = await getDistributionResult(rewardAmount, rewardMap, snapshot)
+    // ensure snapshot is not empty.
+    if (Object.entries(snapshot).length === 0) {
+        throw new Error("empty snapshot")
+    }
 
-    saveDistribution(chainId, token, blockNumber, distribution)
+    // get the last reward map for this distribution.
+    const rewardMap = await database.distribution.getLastRewardMap(chainId, token)
 
+    // compute the distribution merkle tree
+    const { totalShares, totalRewards, root, list } = await getDistributionTree(snapshot, rewardMap, rewardAmount)
+
+    // save the distribution merkle tree.
+    database.distribution.save({ chainId, token, blockNumber, totalShares, totalRewards, root, list })
+
+    // display the tree root to the user.
     console.log(`npm run pending ${chainId} ${token} to display values to send to the contract`)
 }
 
 distribute()
     .then(async () => {
-        await disconnect()
+        await database.disconnect()
     })
     .catch(async (e) => {
         console.error(e)
-        await disconnect()
+        await database.disconnect()
         process.exit(1)
     })

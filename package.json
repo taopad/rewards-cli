@@ -4,11 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "snapshot": "npx ts-node ./src/snapshot.ts",
     "distribute": "npx ts-node ./src/distribute.ts",
     "whitelist": "npx ts-node ./src/whitelist.ts",
-    "pending": "npx ts-node ./src/pending.ts",
-    "verify": "npx ts-node ./src/verify.ts",
     "check": "npx ts-node ./src/check.ts"
   },
   "author": "",
@@ -17,10 +14,11 @@
     "@openzeppelin/merkle-tree": "^1.0.5",
     "@prisma/client": "^5.8.1",
     "@types/node": "^20.11.5",
+    "@urql/core": "^4.2.3",
     "dotenv": "^16.3.2",
     "prisma": "^5.8.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
-    "viem": "^2.4.0"
+    "viem": "^2.7.13"
   }
 }

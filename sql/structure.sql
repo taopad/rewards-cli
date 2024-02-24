@@ -2,8 +2,8 @@
 -- PostgreSQL database dump
 --
 
--- Dumped from database version 12.15 (Ubuntu 12.15-0ubuntu0.20.04.1)
--- Dumped by pg_dump version 12.15 (Ubuntu 12.15-0ubuntu0.20.04.1)
+-- Dumped from database version 12.18 (Ubuntu 12.18-1.pgdg22.04+1)
+-- Dumped by pg_dump version 12.18 (Ubuntu 12.18-1.pgdg22.04+1)
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -50,25 +50,11 @@ CREATE TABLE public.distributions_proofs (
 
 
 --
--- Name: snapshots; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.snapshots (
-    block_number bigint NOT NULL,
-    address character(42) NOT NULL,
-    balance character varying NOT NULL,
-    is_contract boolean NOT NULL,
-    is_blacklisted boolean NOT NULL
-);
-
-
---
 -- Name: whitelists; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.whitelists (
-    block_number bigint NOT NULL,
-    min_amount character varying NOT NULL,
+    launchpad character(42) NOT NULL,
     root character(66) NOT NULL
 );
 
@@ -78,10 +64,8 @@ CREATE TABLE public.whitelists (
 --
 
 CREATE TABLE public.whitelists_proofs (
-    block_number bigint NOT NULL,
-    min_amount character varying NOT NULL,
+    launchpad character(42) NOT NULL,
     address character(42) NOT NULL,
-    balance character varying NOT NULL,
     proof character(66)[] NOT NULL
 );
 
@@ -103,19 +87,11 @@ ALTER TABLE ONLY public.distributions_proofs
 
 
 --
--- Name: snapshots snapshots_pk; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.snapshots
-    ADD CONSTRAINT snapshots_pk PRIMARY KEY (block_number, address);
-
-
---
 -- Name: whitelists whitelists_pk; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.whitelists
-    ADD CONSTRAINT whitelists_pk PRIMARY KEY (block_number, min_amount);
+    ADD CONSTRAINT whitelists_pk PRIMARY KEY (launchpad);
 
 
 --
@@ -123,7 +99,7 @@ ALTER TABLE ONLY public.whitelists
 --
 
 ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (block_number, min_amount, address);
+    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (launchpad, address);
 
 
 --
@@ -162,13 +138,6 @@ CREATE INDEX distributions_token_index ON public.distributions USING btree (toke
 
 
 --
--- Name: snapshots_address_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX snapshots_address_index ON public.snapshots USING btree (address);
-
-
---
 -- Name: whitelists_proofs_address_index; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -184,21 +153,14 @@ ALTER TABLE ONLY public.distributions_proofs
 
 
 --
--- Name: whitelists_proofs whitelists_proofs_snapshots_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_snapshots_fk FOREIGN KEY (block_number, address) REFERENCES public.snapshots(block_number, address);
-
-
---
 -- Name: whitelists_proofs whitelists_proofs_whitelists_fk; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_whitelists_fk FOREIGN KEY (block_number, min_amount) REFERENCES public.whitelists(block_number, min_amount);
+    ADD CONSTRAINT whitelists_proofs_whitelists_fk FOREIGN KEY (launchpad) REFERENCES public.whitelists(launchpad);
 
 
 --
 -- PostgreSQL database dump complete
 --
+

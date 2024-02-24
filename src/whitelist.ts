@@ -1,102 +1,119 @@
+import { isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
-import { getIsExcluded } from "../config"
-import { Snapshot, WhitelistResult, WhitelistItem } from "./types"
-import { getLastSnapshotBlockNumber, getSnapshotAt } from "./lib/storage"
-import { getWhitelist, saveWhitelist, disconnect } from "./lib/storage"
-import { snapshotToHolderMap } from "./lib/utils"
+import { graphql } from "./lib/graphql"
+import { database } from "./lib/database"
+import { getLastFinalizedBlockNumber } from "./lib/blockchain"
+import { Snapshot, WhitelistItem } from "./types"
 
-const getWhitelistResult = async (minAmount: bigint, snapshot: Snapshot): Promise<WhitelistResult> => {
-    const holderMap = snapshotToHolderMap(snapshot)
-
-    const addresses: [string][] = []
-    const isExcluded = await getIsExcluded()
-
-    for (const address in holderMap) {
-        const holder = holderMap[address]
-
-        if (!isExcluded(address) && !holder.isBlacklisted && holder.balance >= minAmount) {
-            addresses.push([address])
-        }
-    }
-
-    const tree = StandardMerkleTree.of(addresses, ["address"])
-
-    const list: WhitelistItem[] = []
-
-    for (const [i, [address]] of tree.entries()) {
-        list.push({
-            address: address,
-            balance: holderMap[address].balance,
-            proof: tree.getProof(i),
-        });
-    }
-
-    return { root: tree.root, list }
+type WhitelistTreeResult = {
+    root: string,
+    list: WhitelistItem[]
 }
 
-const parseMinAmount = (): bigint => {
+const parseLaunchpad = () => {
     if (process.argv.length < 3) {
-        throw new Error("min_amount is required [min_amount, block_number?]")
+        throw new Error("launchpad_address is required [launchpad_address, min_balance, block_number?]")
     }
 
-    try {
-        return BigInt(process.argv[2])
-    } catch (e: any) {
-        throw new Error("min_amount must be parsable as bigint")
+    const launchpad = process.argv[2]
+
+    if (!isAddress(launchpad)) {
+        throw new Error("launchpad_address must be a valid address")
     }
+
+    return launchpad
 }
 
-const parseOptionalBlockNumber = (): bigint | undefined => {
+const parseMinBalance = () => {
     if (process.argv.length < 4) {
-        return undefined
+        throw new Error("min_balance is required [launchpad_address, min_balance, block_number?]")
     }
 
     try {
         return BigInt(process.argv[3])
     } catch (e: any) {
+        throw new Error("min_balance must be parsable as bigint")
+    }
+}
+
+const parseOptionalBlockNumber = () => {
+    if (process.argv.length < 5) {
+        return undefined
+    }
+
+    try {
+        return BigInt(process.argv[4])
+    } catch (e: any) {
         throw new Error("block_number must be parsable as bigint")
     }
 }
 
-const getBlockNumber = async (blockNumber: bigint | undefined) => {
+const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
+    const lastFinalizedBlockNumber = await getLastFinalizedBlockNumber()
+
     if (blockNumber === undefined) {
-        return await getLastSnapshotBlockNumber()
+        return lastFinalizedBlockNumber
     }
 
-    return blockNumber
+    if (blockNumber <= lastFinalizedBlockNumber) {
+        return blockNumber
+    }
+
+    throw new Error("block number must be before last finalized block number")
+}
+
+const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult> => {
+    const list = []
+
+    const addresses = Object.keys(snapshot)
+
+    const tree = StandardMerkleTree.of(addresses.map(address => [address]), ["address"])
+
+    for (const [i, [address]] of tree.entries()) {
+        list.push({ address: address, proof: tree.getProof(i) })
+    }
+
+    return { root: tree.root, list }
 }
 
 const whitelist = async () => {
     // parse input.
-    const minAmount = parseMinAmount()
-    const blockNumber = await getBlockNumber(parseOptionalBlockNumber())
+    const launchpad = parseLaunchpad()
+    const minBalance = parseMinBalance()
+    const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
 
-    // ensure theres a snapshot for this block number.
-    const snapshot = await getSnapshotAt(blockNumber)
+    // ensure whitelist does not exist.
+    const maybeWhitelist = await database.whitelist.get(launchpad)
 
-    if (snapshot.length === 0) {
-        throw new Error(`no snapshot for block ${blockNumber}`)
+    if (maybeWhitelist !== null) {
+        throw Error(`whitelist already exists for launchpad ${launchpad}`)
     }
 
-    // ensure theres no whitelist at this block and min amount.
-    if (await getWhitelist(blockNumber, minAmount) !== null) {
-        throw new Error(`whitelist already exists at block ${blockNumber} for ${minAmount}`)
+    // take the snapshot with the given block and min balance.
+    const snapshot = await graphql.snapshot(blockNumber, minBalance)
+
+    // ensure snapshot is not empty.
+    if (Object.entries(snapshot).length === 0) {
+        throw new Error("empty snapshot")
     }
 
-    const whitelist = await getWhitelistResult(minAmount, snapshot)
+    // compute the whitelist markle tree.
+    const { root, list } = await getWhitelistTree(snapshot)
 
-    saveWhitelist(blockNumber, minAmount, whitelist)
+    // save the whitelist merkle tree.
+    database.whitelist.save({ launchpad, root, list })
 
-    console.log(`${blockNumber}, ${minAmount}, ${whitelist.root}`)
+    // display the tree root to the user.
+    console.log(`${blockNumber}, ${minBalance}, ${root}`)
 }
 
 whitelist()
     .then(async () => {
-        await disconnect()
+        await database.disconnect()
     })
     .catch(async (e) => {
         console.error(e)
-        await disconnect()
+        await database.disconnect()
         process.exit(1)
     })
