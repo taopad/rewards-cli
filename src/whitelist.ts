@@ -3,11 +3,12 @@ import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { graphql } from "./lib/graphql"
 import { database } from "./lib/database"
+import { outputWhitelistData } from "./lib/view"
 import { getLastFinalizedBlockNumber } from "./lib/blockchain"
 import { Snapshot, WhitelistItem } from "./types"
 
 type WhitelistTreeResult = {
-    root: string,
+    root: `0x${string}`,
     list: WhitelistItem[]
 }
 
@@ -64,17 +65,20 @@ const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
 }
 
 const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult> => {
-    const list = []
+    const list: WhitelistItem[] = []
 
     const addresses = Object.keys(snapshot)
 
     const tree = StandardMerkleTree.of(addresses.map(address => [address]), ["address"])
 
     for (const [i, [address]] of tree.entries()) {
-        list.push({ address: address, proof: tree.getProof(i) })
+        list.push({
+            address: address as `0x${string}`,
+            proof: tree.getProof(i) as `0x${string}`[],
+        })
     }
 
-    return { root: tree.root, list }
+    return { root: tree.root as `0x${string}`, list }
 }
 
 const whitelist = async () => {
@@ -84,7 +88,7 @@ const whitelist = async () => {
     const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
 
     // ensure whitelist does not exist.
-    const maybeWhitelist = await database.whitelist.get(launchpad)
+    const maybeWhitelist = await database.whitelists.get(launchpad)
 
     if (maybeWhitelist !== null) {
         throw Error(`whitelist already exists for launchpad ${launchpad}`)
@@ -102,10 +106,10 @@ const whitelist = async () => {
     const { root, list } = await getWhitelistTree(snapshot)
 
     // save the whitelist merkle tree.
-    database.whitelist.save({ launchpad, root, list })
+    database.whitelists.save({ launchpad, root, list })
 
-    // display the tree root to the user.
-    console.log(`${blockNumber}, ${minBalance}, ${root}`)
+    // output the whitelist data.
+    await outputWhitelistData(launchpad)
 }
 
 whitelist()

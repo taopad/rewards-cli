@@ -1,13 +1,32 @@
 import { PrismaClient } from "@prisma/client"
 
 import { Whitelist } from "../types"
-import { RewardMap, Distribution } from "../types"
+import { SupportedChainId, RewardMap, Distribution } from "../types"
 
 const prisma = new PrismaClient()
 
 // =============================================================================
 // distribution management.
 // =============================================================================
+
+const getDistributions = async (chainId: number, token: `0x${string}`): Promise<Distribution[]> => {
+    const results = await prisma.distributions.findMany({
+        where: {
+            chain_id: chainId,
+            token: token,
+        },
+    })
+
+    return results.map(item => ({
+        chainId: item.chain_id as SupportedChainId,
+        token: item.token as `0x${string}`,
+        blockNumber: item.block_number,
+        totalShares: BigInt(item.total_shares),
+        totalRewards: BigInt(item.total_rewards),
+        root: item.root as `0x${string}`,
+        list: [],
+    }))
+}
 
 const getLastDistributionBlockNumber = async (chainId: number, token: `0x${string}`) => {
     const results = await prisma.distributions.aggregate({
@@ -40,12 +59,12 @@ export const getLastDistribution = async (chainId: number, token: `0x${string}`)
     }
 
     return {
-        chainId: result.chain_id,
-        token: result.token,
+        chainId: result.chain_id as SupportedChainId,
+        token: result.token as `0x${string}`,
         blockNumber: result.block_number,
         totalShares: BigInt(result.total_shares),
         totalRewards: BigInt(result.total_rewards),
-        root: result.root,
+        root: result.root as `0x${string}`,
         list: [],
     }
 }
@@ -89,7 +108,7 @@ export const saveDistribution = async (distribution: Distribution) => {
             }
         }),
         prisma.distributions_proofs.createMany({
-            data: distribution.list.map(({ address, balance, amount, proof }) => ({
+            data: list.map(({ address, balance, amount, proof }) => ({
                 token,
                 chain_id: chainId,
                 block_number: blockNumber,
@@ -109,13 +128,12 @@ export const saveDistribution = async (distribution: Distribution) => {
 const getWhitelist = async (launchpad: `0x${string}`): Promise<Whitelist | null> => {
     const result = await prisma.whitelists.findFirst({
         where: { launchpad },
-        include: { whitelists_proofs: true }
     })
 
     return result === null ? null : {
-        launchpad: result.launchpad,
-        root: result.root,
-        list: result.whitelists_proofs
+        launchpad: result.launchpad as `0x${string}`,
+        root: result.root as `0x${string}`,
+        list: []
     }
 }
 
@@ -137,12 +155,13 @@ const saveWhitelist = async (whitelist: Whitelist) => {
 // =============================================================================
 
 export const database = {
-    distribution: {
+    distributions: {
+        all: getDistributions,
         getLast: getLastDistribution,
         getLastRewardMap: getLastRewardMap,
         save: saveDistribution,
     },
-    whitelist: {
+    whitelists: {
         get: getWhitelist,
         save: saveWhitelist,
     },

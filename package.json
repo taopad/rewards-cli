@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "distribute": "npx ts-node ./src/distribute.ts",
+    "distribution:data": "npx ts-node ./src/distributionPendingData.ts",
     "whitelist": "npx ts-node ./src/whitelist.ts",
+    "whitelist:data": "npx ts-node ./src/whitelistData.ts",
     "check": "npx ts-node ./src/check.ts"
   },
   "author": "",

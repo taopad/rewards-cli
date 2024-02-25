@@ -3,19 +3,18 @@ import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { graphql } from "./lib/graphql"
 import { database } from "./lib/database"
+import { outputDistributionPendingData } from "./lib/view"
 import { getLastFinalizedBlockNumber } from "./lib/blockchain"
-import { Snapshot, RewardMap, DistributionItem } from "./types"
+import { Snapshot, RewardMap, DistributionItem, isSupportedChainId } from "./types"
 
 export type DistributionTreeResult = {
     totalShares: bigint
     totalRewards: bigint
-    root: string
+    root: `0x${string}`
     list: DistributionItem[]
 }
 
-const shareReducer = (acc: bigint, current: bigint) => acc + current
-
-const parseChainId = (): number => {
+const parseChainId = () => {
     if (process.argv.length < 3) {
         throw new Error("chain id is required [chain_id, token_address, reward_amount, block_number?]")
     }
@@ -26,10 +25,14 @@ const parseChainId = (): number => {
         throw new Error("chain_id must be parsable as number")
     }
 
+    if (!isSupportedChainId(chainId)) {
+        throw new Error(`chain_id ${chainId} is not supported`)
+    }
+
     return chainId
 }
 
-const parseTokenAddress = (): `0x${string}` => {
+const parseTokenAddress = () => {
     if (process.argv.length < 4) {
         throw new Error("token address is required [chain_id, token_address, reward_amount, block_number?]")
     }
@@ -43,19 +46,25 @@ const parseTokenAddress = (): `0x${string}` => {
     return token
 }
 
-const parseRewardAmount = (): bigint => {
+const parseRewardAmount = () => {
     if (process.argv.length < 5) {
         throw new Error("reward_amount is required [chain_id, token_address, reward_amount, block_number?]")
     }
 
     try {
-        return BigInt(process.argv[4])
+        const amount = BigInt(process.argv[4])
+
+        if (amount > 0n) {
+            return amount
+        }
+
+        throw new Error()
     } catch (e: any) {
-        throw new Error("reward_amount must be parsable as bigint")
+        throw new Error("reward_amount must be parsable as bigint and must be greater than 0")
     }
 }
 
-const parseOptionalBlockNumber = (): bigint | undefined => {
+const parseOptionalBlockNumber = () => {
     if (process.argv.length < 6) {
         return undefined
     }
@@ -84,7 +93,11 @@ const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
 
 const getDistributionTree = async (snapshot: Snapshot, rewardMap: RewardMap, rewardAmount: bigint): Promise<DistributionTreeResult> => {
     let totalRewards = 0n
-    const totalShares = Object.values(snapshot).reduce(shareReducer)
+    const totalShares = Object.values(snapshot).reduce((acc, current) => acc + current, 0n)
+
+    if (totalShares === 0n) {
+        throw new Error("total shares is 0")
+    }
 
     for (const [address, balance] of Object.entries(snapshot)) {
         const rewards = (balance * rewardAmount) / totalShares
@@ -96,20 +109,24 @@ const getDistributionTree = async (snapshot: Snapshot, rewardMap: RewardMap, rew
         }
     }
 
+    if (totalRewards === 0n) {
+        throw new Error("total rewards is 0")
+    }
+
     const list: DistributionItem[] = []
 
     const tree = StandardMerkleTree.of(Object.entries(rewardMap), ["address", "uint256"])
 
     for (const [i, [address, amount]] of tree.entries()) {
         list.push({
-            address: address,
+            address: address as `0x${string}`,
             balance: snapshot[address] ?? 0n,
             amount: amount,
-            proof: tree.getProof(i),
+            proof: tree.getProof(i) as `0x${string}`[],
         });
     }
 
-    return { totalShares, totalRewards, root: tree.root, list }
+    return { totalShares, totalRewards, root: tree.root as `0x${string}`, list }
 }
 
 const distribute = async () => {
@@ -120,7 +137,7 @@ const distribute = async () => {
     const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
 
     // ensure theres no more recent distribution for this token on this chain.
-    const lastDistribution = await database.distribution.getLast(chainId, token)
+    const lastDistribution = await database.distributions.getLast(chainId, token)
 
     if (lastDistribution != null && lastDistribution.blockNumber >= blockNumber) {
         throw new Error(`distribution already exists for ${lastDistribution.blockNumber}`)
@@ -135,16 +152,16 @@ const distribute = async () => {
     }
 
     // get the last reward map for this distribution.
-    const rewardMap = await database.distribution.getLastRewardMap(chainId, token)
+    const rewardMap = await database.distributions.getLastRewardMap(chainId, token)
 
     // compute the distribution merkle tree
     const { totalShares, totalRewards, root, list } = await getDistributionTree(snapshot, rewardMap, rewardAmount)
 
     // save the distribution merkle tree.
-    database.distribution.save({ chainId, token, blockNumber, totalShares, totalRewards, root, list })
+    database.distributions.save({ chainId, token, blockNumber, totalShares, totalRewards, root, list })
 
-    // display the tree root to the user.
-    console.log(`npm run pending ${chainId} ${token} to display values to send to the contract`)
+    // output the distribution pending data.
+    await outputDistributionPendingData(chainId, token)
 }
 
 distribute()

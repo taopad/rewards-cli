@@ -1,5 +1,6 @@
 import { mainnet, arbitrum } from "viem/chains"
 import { PublicClient, createPublicClient, http } from "viem"
+import { SupportedChainId } from "../types"
 
 export const TaopadAddress = "0x5483DC6abDA5F094865120B2D251b5744fc2ECB5" as `0x${string}`
 export const UniswapLpAddress = "0xcd8804fE8a25325f4EC56e1D5Fb5e3b93ECb9e6E" as `0x${string}`
@@ -49,9 +50,7 @@ const DistributorContract = {
     ] as const,
 }
 
-const chains = [mainnet, arbitrum]
-
-type SupportedChainId = typeof chains[number]["id"]
+export const chains = [mainnet, arbitrum]
 
 const publicClients: Record<SupportedChainId, PublicClient> = {
     [mainnet.id]: createPublicClient({ chain: mainnet, transport: http() }),
