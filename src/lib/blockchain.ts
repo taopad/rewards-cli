@@ -1,5 +1,5 @@
 import { mainnet, arbitrum } from "viem/chains"
-import { PublicClient, createPublicClient, http } from "viem"
+import { PublicClient, createPublicClient, erc20Abi, http } from "viem"
 import { SupportedChainId } from "../types"
 
 export const TaopadAddress = "0x5483DC6abDA5F094865120B2D251b5744fc2ECB5" as `0x${string}`
@@ -57,11 +57,7 @@ const publicClients: Record<SupportedChainId, PublicClient> = {
     [arbitrum.id]: createPublicClient({ chain: arbitrum, transport: http() }),
 }
 
-export const getLastFinalizedBlockNumber = async () => {
-    return (await publicClients[mainnet.id].getBlock({ blockTag: "finalized" })).number
-}
-
-const getOperator = async (): Promise<`0x${string}`> => {
+const getOperator = async () => {
     return await publicClients[mainnet.id].readContract({
         ...TaopadContract,
         functionName: "operator",
@@ -72,7 +68,7 @@ export const taopad = {
     operator: getOperator,
 }
 
-const getRoot = async (chainId: SupportedChainId, token: `0x${string}`): Promise<string> => {
+const getRoot = async (chainId: SupportedChainId, token: `0x${string}`) => {
     return await publicClients[chainId].readContract({
         ...DistributorContract,
         functionName: "roots",
@@ -82,4 +78,48 @@ const getRoot = async (chainId: SupportedChainId, token: `0x${string}`): Promise
 
 export const distributor = {
     root: getRoot,
+}
+
+const getBlockchainName = (chainId: SupportedChainId) => {
+    return chains.find(chain => chain.id === chainId)!.name
+}
+
+const getLastFinalizedBlockNumber = async () => {
+    return (await publicClients[mainnet.id].getBlock({ blockTag: "finalized" })).number
+}
+
+const getBlockTimestamp = async (blockNumber: bigint) => {
+    return (await publicClients[mainnet.id].getBlock({ blockNumber })).timestamp
+}
+
+const getTokenInfo = async (chainId: SupportedChainId, token: `0x${string}`) => {
+    const [name, symbol, decimals] = await publicClients[chainId].multicall({
+        allowFailure: false,
+        contracts: [
+            {
+                abi: erc20Abi,
+                address: token,
+                functionName: "name",
+            },
+            {
+                abi: erc20Abi,
+                address: token,
+                functionName: "symbol",
+            },
+            {
+                abi: erc20Abi,
+                address: token,
+                functionName: "decimals",
+            },
+        ]
+    })
+
+    return { name, symbol, decimals }
+}
+
+export const blockchain = {
+    tokenInfo: getTokenInfo,
+    blockchainName: getBlockchainName,
+    blockTimestamp: getBlockTimestamp,
+    lastBlockNumber: getLastFinalizedBlockNumber,
 }

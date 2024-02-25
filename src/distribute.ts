@@ -1,11 +1,12 @@
-import { isAddress } from "viem"
+import yesno from "yesno"
+import { formatUnits, isAddress } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { graphql } from "./lib/graphql"
 import { database } from "./lib/database"
+import { blockchain } from "./lib/blockchain"
 import { outputDistributionPendingData } from "./lib/view"
-import { getLastFinalizedBlockNumber } from "./lib/blockchain"
-import { Snapshot, RewardMap, DistributionItem, isSupportedChainId } from "./types"
+import { SupportedChainId, Snapshot, RewardMap, DistributionItem, isSupportedChainId } from "./types"
 
 export type DistributionTreeResult = {
     totalShares: bigint
@@ -78,17 +79,33 @@ const parseOptionalBlockNumber = () => {
 }
 
 const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
-    const lastFinalizedBlockNumber = await getLastFinalizedBlockNumber()
+    const lastBlockNumber = await blockchain.lastBlockNumber()
 
     if (blockNumber === undefined) {
-        return lastFinalizedBlockNumber
+        return lastBlockNumber
     }
 
-    if (blockNumber <= lastFinalizedBlockNumber) {
+    if (blockNumber <= lastBlockNumber) {
         return blockNumber
     }
 
     throw new Error("block number must be before last finalized block number")
+}
+
+const confirmParameters = async (chainId: SupportedChainId, token: `0x${string}`, rewardAmount: bigint, blockNumber: bigint) => {
+    const timestamp = Number(await blockchain.blockTimestamp(blockNumber) * 1000n)
+    const { name, symbol, decimals } = await blockchain.tokenInfo(chainId, token)
+
+    console.log(`Chain: ${blockchain.blockchainName(chainId)}`)
+    console.log(`Token: ${name} `)
+    console.log(`Amount: ${formatUnits(rewardAmount, decimals)} \$${symbol}`)
+    console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
+
+    const ok = await yesno({ question: 'Are you sure you want to continue?' })
+
+    if (!ok) {
+        throw new Error("terminated by user")
+    }
 }
 
 const getDistributionTree = async (snapshot: Snapshot, rewardMap: RewardMap, rewardAmount: bigint): Promise<DistributionTreeResult> => {
@@ -135,6 +152,9 @@ const distribute = async () => {
     const token = parseTokenAddress()
     const rewardAmount = parseRewardAmount()
     const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
+
+    // confirm the distribution.
+    await confirmParameters(chainId, token, rewardAmount, blockNumber)
 
     // ensure theres no more recent distribution for this token on this chain.
     const lastDistribution = await database.distributions.getLast(chainId, token)
