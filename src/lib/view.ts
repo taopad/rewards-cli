@@ -32,8 +32,8 @@ export const outputDistributionPendingData = async (chainId: SupportedChainId, t
     console.log(`updateRoot(\n${token}\n${total}\n${root}\n)`)
 }
 
-export const outputWhitelistData = async (launchpad: `0x${string}`) => {
-    const whitelist = await database.whitelists.get(launchpad)
+export const outputWhitelistData = async (chainId: SupportedChainId, launchpad: `0x${string}`) => {
+    const whitelist = await database.whitelists.get(chainId, launchpad)
 
     if (whitelist === null) {
         throw new Error(`no whitelist for launchpad ${launchpad}`)

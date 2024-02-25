@@ -178,7 +178,7 @@ const distribute = async () => {
     const { totalShares, totalRewards, root, list } = await getDistributionTree(snapshot, rewardMap, rewardAmount)
 
     // save the distribution merkle tree.
-    database.distributions.save({ chainId, token, blockNumber, totalShares, totalRewards, root, list })
+    await database.distributions.save({ chainId, token, blockNumber, totalShares, totalRewards, root, list })
 
     // output the distribution pending data.
     await outputDistributionPendingData(chainId, token)

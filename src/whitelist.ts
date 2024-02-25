@@ -3,21 +3,39 @@ import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { graphql } from "./lib/graphql"
 import { database } from "./lib/database"
+import { blockchain } from "./lib/blockchain"
 import { outputWhitelistData } from "./lib/view"
-import { getLastFinalizedBlockNumber } from "./lib/blockchain"
-import { Snapshot, WhitelistItem } from "./types"
+import { Snapshot, WhitelistItem, isSupportedChainId } from "./types"
 
 type WhitelistTreeResult = {
     root: `0x${string}`,
     list: WhitelistItem[]
 }
 
-const parseLaunchpad = () => {
+const parseChainId = () => {
     if (process.argv.length < 3) {
-        throw new Error("launchpad_address is required [launchpad_address, min_balance, block_number?]")
+        throw new Error("chain id is required [chain_id, launchpad_address, min_balance, block_number?]")
     }
 
-    const launchpad = process.argv[2]
+    const chainId = parseInt(process.argv[2])
+
+    if (isNaN(chainId)) {
+        throw new Error("chain_id must be parsable as number")
+    }
+
+    if (!isSupportedChainId(chainId)) {
+        throw new Error(`chain_id ${chainId} is not supported`)
+    }
+
+    return chainId
+}
+
+const parseLaunchpad = () => {
+    if (process.argv.length < 4) {
+        throw new Error("launchpad_address is required [chain_id, launchpad_address, min_balance, block_number?]")
+    }
+
+    const launchpad = process.argv[3]
 
     if (!isAddress(launchpad)) {
         throw new Error("launchpad_address must be a valid address")
@@ -27,37 +45,37 @@ const parseLaunchpad = () => {
 }
 
 const parseMinBalance = () => {
-    if (process.argv.length < 4) {
-        throw new Error("min_balance is required [launchpad_address, min_balance, block_number?]")
+    if (process.argv.length < 5) {
+        throw new Error("min_balance is required [chain_id, launchpad_address, min_balance, block_number?]")
     }
 
     try {
-        return BigInt(process.argv[3])
+        return BigInt(process.argv[4])
     } catch (e: any) {
         throw new Error("min_balance must be parsable as bigint")
     }
 }
 
 const parseOptionalBlockNumber = () => {
-    if (process.argv.length < 5) {
+    if (process.argv.length < 6) {
         return undefined
     }
 
     try {
-        return BigInt(process.argv[4])
+        return BigInt(process.argv[5])
     } catch (e: any) {
         throw new Error("block_number must be parsable as bigint")
     }
 }
 
 const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
-    const lastFinalizedBlockNumber = await getLastFinalizedBlockNumber()
+    const lastBlockNumber = await blockchain.lastBlockNumber()
 
     if (blockNumber === undefined) {
-        return lastFinalizedBlockNumber
+        return lastBlockNumber
     }
 
-    if (blockNumber <= lastFinalizedBlockNumber) {
+    if (blockNumber <= lastBlockNumber) {
         return blockNumber
     }
 
@@ -75,6 +93,7 @@ const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult
         list.push({
             address: address as `0x${string}`,
             proof: tree.getProof(i) as `0x${string}`[],
+            balance: snapshot[address] ?? 0n,
         })
     }
 
@@ -83,12 +102,13 @@ const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult
 
 const whitelist = async () => {
     // parse input.
+    const chainId = parseChainId()
     const launchpad = parseLaunchpad()
     const minBalance = parseMinBalance()
     const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
 
     // ensure whitelist does not exist.
-    const maybeWhitelist = await database.whitelists.get(launchpad)
+    const maybeWhitelist = await database.whitelists.get(chainId, launchpad)
 
     if (maybeWhitelist !== null) {
         throw Error(`whitelist already exists for launchpad ${launchpad}`)
@@ -106,10 +126,10 @@ const whitelist = async () => {
     const { root, list } = await getWhitelistTree(snapshot)
 
     // save the whitelist merkle tree.
-    database.whitelists.save({ launchpad, root, list })
+    await database.whitelists.save({ chainId, launchpad, root, blockNumber, minBalance, list })
 
     // output the whitelist data.
-    await outputWhitelistData(launchpad)
+    await outputWhitelistData(chainId, launchpad)
 }
 
 whitelist()

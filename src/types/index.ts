@@ -17,21 +17,25 @@ export type Distribution = {
 }
 
 export type DistributionItem = {
-    address: `0x${string}`,
-    balance: bigint,
-    amount: bigint,
-    proof: `0x${string}`[],
+    address: `0x${string}`
+    balance: bigint
+    amount: bigint
+    proof: `0x${string}`[]
 }
 
 export type Whitelist = {
+    chainId: SupportedChainId
     launchpad: `0x${string}`
     root: `0x${string}`
+    blockNumber: bigint
+    minBalance: bigint
     list: WhitelistItem[]
 }
 
 export type WhitelistItem = {
-    address: `0x${string}`,
-    proof: `0x${string}`[],
+    address: `0x${string}`
+    proof: `0x${string}`[]
+    balance: bigint
 }
 
 export const isSupportedChainId = (chainId: number): chainId is SupportedChainId => {

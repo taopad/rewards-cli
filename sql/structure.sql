@@ -54,8 +54,11 @@ CREATE TABLE public.distributions_proofs (
 --
 
 CREATE TABLE public.whitelists (
+    chain_id integer NOT NULL,
     launchpad character(42) NOT NULL,
-    root character(66) NOT NULL
+    root character(66) NOT NULL,
+    block_number bigint DEFAULT 0 NOT NULL,
+    min_balance character varying DEFAULT '0'::character varying NOT NULL
 );
 
 
@@ -64,9 +67,11 @@ CREATE TABLE public.whitelists (
 --
 
 CREATE TABLE public.whitelists_proofs (
+    chain_id integer NOT NULL,
     launchpad character(42) NOT NULL,
     address character(42) NOT NULL,
-    proof character(66)[] NOT NULL
+    proof character(66)[] NOT NULL,
+    balance character varying DEFAULT '0'::character varying NOT NULL
 );
 
 
@@ -91,7 +96,7 @@ ALTER TABLE ONLY public.distributions_proofs
 --
 
 ALTER TABLE ONLY public.whitelists
-    ADD CONSTRAINT whitelists_pk PRIMARY KEY (launchpad);
+    ADD CONSTRAINT whitelists_pk PRIMARY KEY (chain_id, launchpad);
 
 
 --
@@ -99,49 +104,35 @@ ALTER TABLE ONLY public.whitelists
 --
 
 ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (launchpad, address);
+    ADD CONSTRAINT whitelists_proofs_pk PRIMARY KEY (chain_id, launchpad, address);
 
 
 --
--- Name: distributions_block_number_index; Type: INDEX; Schema: public; Owner: -
+-- Name: distributions_chain_id_token_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX distributions_block_number_index ON public.distributions USING btree (block_number);
-
-
---
--- Name: distributions_proofs_address_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX distributions_proofs_address_index ON public.distributions_proofs USING btree (address);
+CREATE INDEX distributions_chain_id_token_index ON public.distributions USING btree (chain_id, token);
 
 
 --
--- Name: distributions_proofs_block_number_index; Type: INDEX; Schema: public; Owner: -
+-- Name: distributions_proofs_chain_id_token_address_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX distributions_proofs_block_number_index ON public.distributions_proofs USING btree (block_number);
-
-
---
--- Name: distributions_proofs_token_index; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX distributions_proofs_token_index ON public.distributions_proofs USING btree (token);
+CREATE INDEX distributions_proofs_chain_id_token_address_index ON public.distributions_proofs USING btree (chain_id, token, address);
 
 
 --
--- Name: distributions_token_index; Type: INDEX; Schema: public; Owner: -
+-- Name: distributions_proofs_chain_id_token_block_number_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX distributions_token_index ON public.distributions USING btree (token);
+CREATE INDEX distributions_proofs_chain_id_token_block_number_index ON public.distributions_proofs USING btree (chain_id, token, block_number);
 
 
 --
--- Name: whitelists_proofs_address_index; Type: INDEX; Schema: public; Owner: -
+-- Name: whitelists_proofs_chain_id_launchpad_index; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE INDEX whitelists_proofs_address_index ON public.whitelists_proofs USING btree (address);
+CREATE INDEX whitelists_proofs_chain_id_launchpad_index ON public.whitelists_proofs USING btree (chain_id, launchpad);
 
 
 --
@@ -157,7 +148,7 @@ ALTER TABLE ONLY public.distributions_proofs
 --
 
 ALTER TABLE ONLY public.whitelists_proofs
-    ADD CONSTRAINT whitelists_proofs_whitelists_fk FOREIGN KEY (launchpad) REFERENCES public.whitelists(launchpad);
+    ADD CONSTRAINT whitelists_proofs_whitelists_fk FOREIGN KEY (chain_id, launchpad) REFERENCES public.whitelists(chain_id, launchpad);
 
 
 --
