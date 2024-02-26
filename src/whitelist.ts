@@ -1,11 +1,12 @@
-import { isAddress } from "viem"
+import yesno from "yesno"
+import { isAddress, formatUnits } from "viem"
 import { StandardMerkleTree } from "@openzeppelin/merkle-tree"
 
 import { graphql } from "./lib/graphql"
 import { database } from "./lib/database"
 import { blockchain } from "./lib/blockchain"
 import { outputWhitelistData } from "./lib/view"
-import { Snapshot, WhitelistItem, isSupportedChainId } from "./types"
+import { SupportedChainId, Snapshot, WhitelistItem, isSupportedChainId } from "./types"
 
 type WhitelistTreeResult = {
     root: `0x${string}`,
@@ -82,6 +83,21 @@ const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
     throw new Error("block number must be before last finalized block number")
 }
 
+const confirmParameters = async (chainId: SupportedChainId, launchpad: `0x${string}`, minBalance: bigint, blockNumber: bigint) => {
+    const timestamp = Number(await blockchain.blockTimestamp(blockNumber) * 1000n)
+
+    console.log(`Chain: ${blockchain.blockchainName(chainId)}`)
+    console.log(`Launchpad: ${launchpad}`)
+    console.log(`Min balance: ${formatUnits(minBalance, 18)} \$TPAD`)
+    console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
+
+    const ok = await yesno({ question: 'Are you sure you want to continue?' })
+
+    if (!ok) {
+        throw new Error("terminated by user")
+    }
+}
+
 const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult> => {
     const list: WhitelistItem[] = []
 
@@ -106,6 +122,9 @@ const whitelist = async () => {
     const launchpad = parseLaunchpad()
     const minBalance = parseMinBalance()
     const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
+
+    // confirm the distribution.
+    await confirmParameters(chainId, launchpad, minBalance, blockNumber)
 
     // ensure whitelist does not exist.
     const maybeWhitelist = await database.whitelists.get(chainId, launchpad)
