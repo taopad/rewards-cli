@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "block": "npx ts-node ./src/block.ts",
     "distribution:new": "npx ts-node ./src/distribute.ts",
     "distribution:data": "npx ts-node ./src/distributionPendingData.ts",
     "whitelist:new": "npx ts-node ./src/whitelist.ts",
