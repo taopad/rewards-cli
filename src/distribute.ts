@@ -97,7 +97,7 @@ const confirmParameters = async (chainId: SupportedChainId, token: `0x${string}`
     const { name, symbol, decimals } = await blockchain.tokenInfo(chainId, token)
 
     console.log(`Chain: ${blockchain.blockchainName(chainId)}`)
-    console.log(`Token: ${name} `)
+    console.log(`Token: ${name}`)
     console.log(`Amount: ${formatUnits(rewardAmount, decimals)} \$${symbol}`)
     console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
 
