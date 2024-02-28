@@ -146,7 +146,7 @@ const getDistributionTree = async (snapshot: Snapshot, rewardMap: RewardMap, rew
     return { totalShares, totalRewards, root: tree.root as `0x${string}`, list }
 }
 
-const distribute = async () => {
+const distributionNew = async () => {
     // parse input.
     const chainId = parseChainId()
     const token = parseTokenAddress()
@@ -184,7 +184,7 @@ const distribute = async () => {
     await outputDistributionPendingData(chainId, token)
 }
 
-distribute()
+distributionNew()
     .then(async () => {
         await database.disconnect()
     })

@@ -36,7 +36,7 @@ const parseTokenAddress = () => {
     return token
 }
 
-const distributionPendingData = async () => {
+const distributionData = async () => {
     // parse input.
     const chainId = parseChainId()
     const token = parseTokenAddress()
@@ -45,7 +45,7 @@ const distributionPendingData = async () => {
     await outputDistributionPendingData(chainId, token)
 }
 
-distributionPendingData()
+distributionData()
     .then(async () => {
         await database.disconnect()
     })

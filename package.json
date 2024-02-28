@@ -5,9 +5,9 @@
   "main": "index.js",
   "scripts": {
     "block": "npx ts-node ./src/block.ts",
-    "distribution:new": "npx ts-node ./src/distribute.ts",
-    "distribution:data": "npx ts-node ./src/distributionPendingData.ts",
-    "whitelist:new": "npx ts-node ./src/whitelist.ts",
+    "distribution:new": "npx ts-node ./src/distributionNew.ts",
+    "distribution:data": "npx ts-node ./src/distributionData.ts",
+    "whitelist:new": "npx ts-node ./src/whitelistNew.ts",
     "whitelist:data": "npx ts-node ./src/whitelistData.ts",
     "check": "npx ts-node ./src/check.ts"
   },

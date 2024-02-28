@@ -116,7 +116,7 @@ const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult
     return { root: tree.root as `0x${string}`, list }
 }
 
-const whitelist = async () => {
+const whitelistNew = async () => {
     // parse input.
     const chainId = parseChainId()
     const launchpad = parseLaunchpad()
@@ -151,7 +151,7 @@ const whitelist = async () => {
     await outputWhitelistData(chainId, launchpad)
 }
 
-whitelist()
+whitelistNew()
     .then(async () => {
         await database.disconnect()
     })
