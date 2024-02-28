@@ -94,12 +94,18 @@ const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
 
 const confirmParameters = async (chainId: SupportedChainId, token: `0x${string}`, rewardAmount: bigint, blockNumber: bigint) => {
     const timestamp = Number(await blockchain.blockTimestamp(blockNumber) * 1000n)
-    const { name, symbol, decimals } = await blockchain.tokenInfo(chainId, token)
+    const blockchainName = blockchain.blockchainName(chainId)
 
-    console.log(`Chain: ${blockchain.blockchainName(chainId)}`)
-    console.log(`Token: ${name}`)
-    console.log(`Amount: ${formatUnits(rewardAmount, decimals)} \$${symbol}`)
-    console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
+    try {
+        const { name, symbol, decimals } = await blockchain.tokenInfo(chainId, token)
+
+        console.log(`Chain: ${blockchain.blockchainName(chainId)}`)
+        console.log(`Token: ${name} (${token})`)
+        console.log(`Amount: ${formatUnits(rewardAmount, decimals)} \$${symbol}`)
+        console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
+    } catch (e) {
+        throw new Error(`address ${token} on ${blockchainName} does not seem to be an ERC20 contract address`)
+    }
 
     const ok = await yesno({ question: 'Are you sure you want to continue?' })
 

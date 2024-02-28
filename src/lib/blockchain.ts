@@ -50,6 +50,22 @@ const DistributorContract = {
     ] as const,
 }
 
+const LaunchpadAbi = [
+    {
+        "inputs": [],
+        "name": "name",
+        "outputs": [
+            {
+                "internalType": "string",
+                "name": "",
+                "type": "string"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+] as const
+
 export const chains = [mainnet, arbitrum]
 
 const publicClients: Record<SupportedChainId, PublicClient> = {
@@ -117,8 +133,19 @@ const getTokenInfo = async (chainId: SupportedChainId, token: `0x${string}`) => 
     return { name, symbol, decimals }
 }
 
+const getLaunchpadInfo = async (chainId: SupportedChainId, launchpad: `0x${string}`) => {
+    const name = await publicClients[chainId].readContract({
+        abi: LaunchpadAbi,
+        address: launchpad,
+        functionName: "name",
+    })
+
+    return { name }
+}
+
 export const blockchain = {
     tokenInfo: getTokenInfo,
+    launchpadInfo: getLaunchpadInfo,
     blockchainName: getBlockchainName,
     blockTimestamp: getBlockTimestamp,
     lastBlockNumber: getLastFinalizedBlockNumber,

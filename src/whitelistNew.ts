@@ -85,11 +85,18 @@ const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
 
 const confirmParameters = async (chainId: SupportedChainId, launchpad: `0x${string}`, minBalance: bigint, blockNumber: bigint) => {
     const timestamp = Number(await blockchain.blockTimestamp(blockNumber) * 1000n)
+    const blockchainName = blockchain.blockchainName(chainId)
 
-    console.log(`Chain: ${blockchain.blockchainName(chainId)}`)
-    console.log(`Launchpad: ${launchpad}`)
-    console.log(`Min balance: ${formatUnits(minBalance, 18)} \$TPAD`)
-    console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
+    try {
+        const { name } = await blockchain.launchpadInfo(chainId, launchpad)
+
+        console.log(`Chain: ${blockchainName}`)
+        console.log(`Launchpad: ${name} (${launchpad})`)
+        console.log(`Min balance: ${formatUnits(minBalance, 18)} \$TPAD`)
+        console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
+    } catch (e) {
+        throw new Error(`address ${launchpad} on ${blockchainName} does not seem to be a launchpad contract address`)
+    }
 
     const ok = await yesno({ question: 'Are you sure you want to continue?' })
 
