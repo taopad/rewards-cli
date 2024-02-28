@@ -40,5 +40,5 @@ export const outputWhitelistData = async (chainId: SupportedChainId, launchpad: 
     }
 
     // log it to console.
-    console.log(`updateWhitelist(\n${launchpad}\n${whitelist.root}\n)`)
+    console.log(`updateWhitelist(\n${whitelist.blockNumber}\n${whitelist.minBalance}\n${whitelist.root}\n)`)
 }
