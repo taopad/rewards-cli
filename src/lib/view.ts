@@ -22,14 +22,18 @@ export const outputDistributionPendingData = async (chainId: SupportedChainId, t
     // get all distributions after this block number.
     const pendingDistributions = distributions.filter(d => d.blockNumber > blockNumber)
 
-    // get the total amount of rewards to send.
-    const total = pendingDistributions.map(d => d.totalRewards).reduce((t, c) => t + c, 0n)
+    if (pendingDistributions.length === 0) {
+        console.log(`contract is up to date`)
+    } else {
+        // get the total amount of rewards to send.
+        const total = pendingDistributions.map(d => d.totalRewards).reduce((t, c) => t + c, 0n)
 
-    // order by most recent block number.
-    const root = pendingDistributions.sort((a, b) => Number(b.blockNumber - a.blockNumber)).shift()!.root
+        // order by most recent block number.
+        const root = pendingDistributions.sort((a, b) => Number(b.blockNumber - a.blockNumber)).shift()!.root
 
-    // log it to console.
-    console.log(`updateRoot(\n${token}\n${total}\n${root}\n)`)
+        // log it to console.
+        console.log(`updateRoot(\n${token}\n${total}\n${root}\n)`)
+    }
 }
 
 export const outputWhitelistData = async (chainId: SupportedChainId, launchpad: `0x${string}`) => {
