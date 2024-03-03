@@ -13,7 +13,7 @@ const getDistributions = async (chainId: SupportedChainId, token: `0x${string}`)
     const results = await prisma.distributions.findMany({
         where: {
             chain_id: chainId,
-            token: token,
+            token: { equals: token, mode: "insensitive" },
         },
     })
 
@@ -33,7 +33,10 @@ const getLastDistributionBlockNumber = async (chainId: SupportedChainId, token: 
         _max: {
             block_number: true
         },
-        where: { chain_id: chainId, token }
+        where: {
+            chain_id: chainId,
+            token: { equals: token, mode: "insensitive" },
+        },
     })
 
     return results._max.block_number
@@ -49,7 +52,7 @@ export const getLastDistribution = async (chainId: SupportedChainId, token: `0x$
     const result = await prisma.distributions.findFirst({
         where: {
             chain_id: chainId,
-            token: token,
+            token: { equals: token, mode: "insensitive" },
             block_number: blockNumber,
         },
     })
@@ -81,13 +84,13 @@ export const getLastRewardMap = async (chainId: SupportedChainId, token: `0x${st
     const results = await prisma.distributions_proofs.findMany({
         where: {
             chain_id: chainId,
+            token: { equals: token, mode: "insensitive" },
             block_number: blockNumber,
-            token,
         }
     })
 
     for (const { address, amount } of results) {
-        rewardMap[address] = BigInt(amount)
+        rewardMap[address.toLowerCase()] = BigInt(amount)
     }
 
     return rewardMap
@@ -100,7 +103,7 @@ export const saveDistribution = async (distribution: Distribution) => {
         prisma.distributions.create({
             data: {
                 chain_id: chainId,
-                token,
+                token: token.toLowerCase(),
                 block_number: blockNumber,
                 total_shares: totalShares.toString(),
                 total_rewards: totalRewards.toString(),
@@ -110,9 +113,9 @@ export const saveDistribution = async (distribution: Distribution) => {
         prisma.distributions_proofs.createMany({
             data: list.map(({ address, balance, amount, proof }) => ({
                 chain_id: chainId,
-                token,
+                token: token.toLowerCase(),
                 block_number: blockNumber,
-                address,
+                address: address.toLowerCase(),
                 balance: balance.toString(),
                 amount: amount.toString(),
                 proof,
@@ -127,7 +130,10 @@ export const saveDistribution = async (distribution: Distribution) => {
 
 const getWhitelist = async (chainId: SupportedChainId, launchpad: `0x${string}`): Promise<Whitelist | null> => {
     const result = await prisma.whitelists.findFirst({
-        where: { chain_id: chainId, launchpad },
+        where: {
+            chain_id: chainId,
+            launchpad: { equals: launchpad, mode: "insensitive" },
+        },
     })
 
     return result === null ? null : {
@@ -147,7 +153,7 @@ const saveWhitelist = async (whitelist: Whitelist) => {
         prisma.whitelists.create({
             data: {
                 chain_id: chainId,
-                launchpad,
+                launchpad: launchpad.toLowerCase(),
                 root,
                 block_number: whitelist.blockNumber,
                 min_balance: whitelist.minBalance.toString(),
@@ -156,8 +162,8 @@ const saveWhitelist = async (whitelist: Whitelist) => {
         prisma.whitelists_proofs.createMany({
             data: list.map(({ address, proof, balance }) => ({
                 chain_id: chainId,
-                launchpad,
-                address,
+                launchpad: launchpad.toLowerCase(),
+                address: address.toLowerCase(),
                 proof,
                 balance: balance.toString()
             }))

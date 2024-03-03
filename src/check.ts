@@ -20,7 +20,10 @@ const getLastDistributionBlockNumber = async (chainId: number, token: string) =>
         _max: {
             block_number: true
         },
-        where: { chain_id: chainId, token }
+        where: {
+            chain_id: chainId,
+            token: { equals: token, mode: "insensitive" },
+        },
     })
 
     return results._max.block_number ?? 0n
@@ -30,7 +33,7 @@ const getRewardAmounts = async (chainId: number, token: string) => {
     return await prisma.$queryRaw<{ block_number: bigint, amounts: string[] }[]>`
         SELECT MAX(block_number) AS block_number, ARRAY_AGG(amount ORDER BY block_number ASC) as amounts
         FROM distributions_proofs
-        WHERE chain_id = ${chainId} AND token = ${token}
+        WHERE chain_id = ${chainId} AND token ILIKE ${token}
         GROUP BY address`
 }
 
@@ -42,9 +45,9 @@ const getDistributionResults = async (chainId: number, token: string, blockNumbe
             proof: true,
         },
         where: {
-            chain_id: { equals: chainId },
-            token: { equals: token },
-            block_number: { equals: blockNumber },
+            chain_id: chainId,
+            token: { equals: token, mode: "insensitive" },
+            block_number: blockNumber,
         }
     })
 }
@@ -65,7 +68,7 @@ const getWhitelistResults = async (launchpad: string) => {
             proof: true,
         },
         where: {
-            launchpad: { equals: launchpad },
+            launchpad: { equals: launchpad, mode: "insensitive" },
         }
     })
 }

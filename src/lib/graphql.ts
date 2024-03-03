@@ -18,8 +18,9 @@ const getIsExcluded = async () => {
     const operator = await taopad.operator()
 
     const excluded = [TaopadAddress, UniswapLpAddress, DistributorAddress, operator]
+        .map(address => address.toLowerCase())
 
-    return (address: string) => excluded.includes(address as `0x${string}`)
+    return (address: string) => excluded.includes(address.toLowerCase() as `0x${string}`)
 }
 
 type GetHolders = {
@@ -101,7 +102,7 @@ const getSnapshot = async (blockNumber: bigint, minBalance: bigint): Promise<Sna
 
         for (const { address, balance } of results) {
             if (!isExcluded(address)) {
-                snapshot[address] = BigInt(balance)
+                snapshot[address.toLowerCase()] = BigInt(balance)
             }
         }
 
