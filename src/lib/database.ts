@@ -157,6 +157,7 @@ const saveWhitelist = async (whitelist: Whitelist) => {
                 root,
                 block_number: whitelist.blockNumber,
                 min_balance: whitelist.minBalance.toString(),
+                total_rewards: "0",
             }
         }),
         prisma.whitelists_proofs.createMany({
@@ -165,7 +166,8 @@ const saveWhitelist = async (whitelist: Whitelist) => {
                 launchpad: launchpad.toLowerCase(),
                 address: address.toLowerCase(),
                 proof,
-                balance: balance.toString()
+                balance: balance.toString(),
+                rewards: "0",
             }))
         })
     ])

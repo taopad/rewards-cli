@@ -1,4 +1,4 @@
-FROM node:18
+FROM node:20
 COPY . /cli
 WORKDIR /cli
 RUN npm install

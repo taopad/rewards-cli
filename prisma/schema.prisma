@@ -1,6 +1,7 @@
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["views"]
+  binaryTargets   = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -17,7 +18,7 @@ model distributions {
   root                 String                 @db.Char(66)
   distributions_proofs distributions_proofs[]
 
-  @@id([chain_id, token, block_number], map: "distributions_pk")
+  @@id([chain_id, token, block_number])
   @@index([chain_id, token], map: "distributions_chain_id_token_index")
 }
 
@@ -31,20 +32,20 @@ model distributions_proofs {
   proof         String[]      @db.Char(66)
   distributions distributions @relation(fields: [chain_id, token, block_number], references: [chain_id, token, block_number], onDelete: NoAction, onUpdate: NoAction, map: "distributions_proofs_distributions_fk")
 
-  @@id([chain_id, token, block_number, address], map: "distributions_proofs_pk")
+  @@id([chain_id, token, block_number, address])
   @@index([chain_id, token, address], map: "distributions_proofs_chain_id_token_address_index")
-  @@index([chain_id, token, block_number], map: "distributions_proofs_chain_id_token_block_number_index")
 }
 
 model whitelists {
   chain_id          Int
   launchpad         String              @db.Char(42)
   root              String              @db.Char(66)
-  block_number      BigInt              @default(0)
-  min_balance       String              @default("0") @db.VarChar
+  block_number      BigInt
+  min_balance       String              @db.VarChar
+  total_rewards     String              @db.VarChar
   whitelists_proofs whitelists_proofs[]
 
-  @@id([chain_id, launchpad], map: "whitelists_pk")
+  @@id([chain_id, launchpad])
 }
 
 model whitelists_proofs {
@@ -52,9 +53,36 @@ model whitelists_proofs {
   launchpad  String     @db.Char(42)
   address    String     @db.Char(42)
   proof      String[]   @db.Char(66)
-  balance    String     @default("0") @db.VarChar
+  balance    String     @db.VarChar
+  rewards    String     @db.VarChar
   whitelists whitelists @relation(fields: [chain_id, launchpad], references: [chain_id, launchpad], onDelete: NoAction, onUpdate: NoAction, map: "whitelists_proofs_whitelists_fk")
 
-  @@id([chain_id, launchpad, address], map: "whitelists_proofs_pk")
-  @@index([chain_id, launchpad], map: "whitelists_proofs_chain_id_launchpad_index")
+  @@id([chain_id, launchpad, address])
+}
+
+model projects {
+  id                Int                 @id @default(autoincrement())
+  admin             String              @db.Char(42)
+  name              String              @default("") @db.VarChar(80)
+  cover             String              @default("") @db.VarChar
+  description       String              @default("")
+  is_published      Boolean             @default(false)
+  is_started        Boolean             @default(false)
+  is_ended          Boolean             @default(false)
+  order             Int
+  projects_presales projects_presales[]
+}
+
+model projects_presales {
+  chain_id          Int
+  address           String   @db.Char(42)
+  project_id        Int
+  name              String   @default("") @db.VarChar(80)
+  raised_amount_eth String   @default("") @db.VarChar
+  is_published      Boolean  @default(false)
+  order             Int
+  projects          projects @relation(fields: [project_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([chain_id, address])
+  @@index([project_id, chain_id, address], map: "projects_presales_project_id_chain_id_address_index")
 }
