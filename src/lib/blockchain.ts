@@ -64,6 +64,19 @@ const LaunchpadAbi = [
         "stateMutability": "view",
         "type": "function"
     },
+    {
+        "inputs": [],
+        "name": "token",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
 ] as const
 
 export const chains = [mainnet, arbitrum]
@@ -73,7 +86,7 @@ const publicClients: Record<SupportedChainId, PublicClient> = {
     [arbitrum.id]: createPublicClient({ chain: arbitrum, transport: http() }),
 }
 
-const getOperator = async () => {
+export const getOperator = async () => {
     return await publicClients[mainnet.id].readContract({
         ...TaopadContract,
         functionName: "operator",
@@ -84,7 +97,7 @@ export const taopad = {
     operator: getOperator,
 }
 
-const getRoot = async (chainId: SupportedChainId, token: `0x${string}`) => {
+export const getRoot = async (chainId: SupportedChainId, token: `0x${string}`) => {
     return await publicClients[chainId].readContract({
         ...DistributorContract,
         functionName: "roots",
@@ -96,51 +109,84 @@ export const distributor = {
     root: getRoot,
 }
 
-const getBlockchainName = (chainId: SupportedChainId) => {
+export const getBlockchain = (chainId: SupportedChainId) => {
+    return chains.find(chain => chain.id === chainId)!
+}
+
+export const getBlockInfo = async (blockNumber: bigint) => {
+    return (await publicClients[mainnet.id].getBlock({ blockNumber }))
+}
+
+// depreciated
+export const getBlockchainName = (chainId: SupportedChainId) => {
     return chains.find(chain => chain.id === chainId)!.name
 }
 
-const getLastFinalizedBlockNumber = async () => {
+// depreciated
+export const getLastFinalizedBlockNumber = async () => {
     return (await publicClients[mainnet.id].getBlock({ blockTag: "finalized" })).number
 }
 
-const getBlockTimestamp = async (blockNumber: bigint) => {
+// depreciated
+export const getBlockTimestamp = async (blockNumber: bigint) => {
     return (await publicClients[mainnet.id].getBlock({ blockNumber })).timestamp
 }
 
-const getTokenInfo = async (chainId: SupportedChainId, token: `0x${string}`) => {
-    const [name, symbol, decimals] = await publicClients[chainId].multicall({
-        allowFailure: false,
-        contracts: [
-            {
-                abi: erc20Abi,
-                address: token,
-                functionName: "name",
-            },
-            {
-                abi: erc20Abi,
-                address: token,
-                functionName: "symbol",
-            },
-            {
-                abi: erc20Abi,
-                address: token,
-                functionName: "decimals",
-            },
-        ]
-    })
+export const getTokenInfo = async (chainId: SupportedChainId, token: `0x${string}`) => {
+    try {
+        const [name, symbol, decimals] = await publicClients[chainId].multicall({
+            allowFailure: false,
+            contracts: [
+                {
+                    abi: erc20Abi,
+                    address: token,
+                    functionName: "name",
+                },
+                {
+                    abi: erc20Abi,
+                    address: token,
+                    functionName: "symbol",
+                },
+                {
+                    abi: erc20Abi,
+                    address: token,
+                    functionName: "decimals",
+                },
+            ]
+        })
 
-    return { name, symbol, decimals }
+        return { name, symbol, decimals }
+    }
+
+    catch (e) {
+        throw new Error(`specified token (chain: ${chainId}, address: ${token}) does not seem to be an ERC20 contract.`)
+    }
 }
 
-const getLaunchpadInfo = async (chainId: SupportedChainId, launchpad: `0x${string}`) => {
-    const name = await publicClients[chainId].readContract({
-        abi: LaunchpadAbi,
-        address: launchpad,
-        functionName: "name",
-    })
+export const getLaunchpadInfo = async (chainId: SupportedChainId, launchpad: `0x${string}`) => {
+    try {
+        const [name, token] = await publicClients[chainId].multicall({
+            allowFailure: false,
+            contracts: [
+                {
+                    abi: LaunchpadAbi,
+                    address: launchpad,
+                    functionName: "name",
+                },
+                {
+                    abi: LaunchpadAbi,
+                    address: launchpad,
+                    functionName: "token",
+                },
+            ]
+        })
 
-    return { name }
+        return { name, token }
+    }
+
+    catch (e) {
+        throw new Error(`specified launchpad (chain: ${chainId}, address: ${launchpad}) does not seem to be a launchpad contract.`)
+    }
 }
 
 export const blockchain = {

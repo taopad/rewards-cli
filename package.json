@@ -1,15 +1,11 @@
 {
-  "name": "rewards-cli",
+  "name": "taopad-cli",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "block": "npx ts-node ./src/block.ts",
-    "distribution:new": "npx ts-node ./src/distributionNew.ts",
-    "distribution:data": "npx ts-node ./src/distributionData.ts",
-    "whitelist:new": "npx ts-node ./src/whitelistNew.ts",
-    "whitelist:data": "npx ts-node ./src/whitelistData.ts",
-    "check": "npx ts-node ./src/check.ts"
+    "build": "tsc",
+    "taopad": "node ./dist/index.js"
   },
   "author": "",
   "license": "ISC",
@@ -18,6 +14,7 @@
     "@prisma/client": "^5.10.2",
     "@types/node": "^20.11.5",
     "@urql/core": "^4.2.3",
+    "commander": "^12.0.0",
     "dotenv": "^16.3.2",
     "prisma": "^5.10.2",
     "ts-node": "^10.9.2",
