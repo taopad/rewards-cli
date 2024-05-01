@@ -1,8 +1,8 @@
 import yesno from "yesno"
 import commander from "commander"
 import { isAddress, formatUnits } from "viem"
-import { SupportedChainId, isSupportedChainId } from "./types"
-import { getBlockchain, getBlockInfo, getLaunchpadInfo, getTokenInfo } from "./lib/blockchain"
+import { getBlockchain, getBlockInfo, getLaunchpadInfo, getTokenInfo } from "./blockchain"
+import { runBlock } from "./commands/block"
 
 const parseBigint = (value: string) => {
     try {
@@ -38,16 +38,6 @@ const parsePositiveBigint = (value: string) => {
     throw new commander.InvalidArgumentError('Must be greater than 0.')
 }
 
-const parseChainId = (value: string) => {
-    const parsed = parsePositiveInt(value)
-
-    if (isSupportedChainId(parsed)) {
-        return parsed
-    }
-
-    throw new commander.InvalidArgumentError('Must be a supported chain id.')
-}
-
 const parseAddress = (value: string) => {
     if (isAddress(value)) {
         return value
@@ -56,7 +46,7 @@ const parseAddress = (value: string) => {
     throw new commander.InvalidArgumentError('Must be a value address.')
 }
 
-const newDistributionPrompt = async (chain_id: SupportedChainId, token: `0x${string}`, amount_in_wei: bigint, block_number: bigint, snapshots: number, interval: number) => {
+const newDistributionPrompt = async (chain_id: number, token: `0x${string}`, amount_in_wei: bigint, block_number: bigint, snapshots: number, interval: number) => {
     const blockchain = getBlockchain(chain_id)
 
     const [blockInfo, tokenInfo] = await Promise.all([
@@ -74,7 +64,7 @@ const newDistributionPrompt = async (chain_id: SupportedChainId, token: `0x${str
     return await yesno({ question: 'Are you sure you want to continue?' })
 }
 
-const newAllocationPrompt = async (chain_id: SupportedChainId, launchpad: `0x${string}`, amount_in_wei: bigint, block_number: bigint, snapshots: number, interval: number) => {
+const newAllocationPrompt = async (chain_id: number, launchpad: `0x${string}`, amount_in_wei: bigint, block_number: bigint, snapshots: number, interval: number) => {
     const blockchain = getBlockchain(chain_id)
 
     const info = async () => {
@@ -105,7 +95,7 @@ program.name("taopad-cli")
 program.version("2.0.0")
 program.description("Taopad cli")
 
-program.command("block").action(() => console.log("block"))
+program.command("block").action(runBlock)
 
 const distribution = program.command("distribution")
 
@@ -114,13 +104,13 @@ distribution.command("new")
         Distributes the given amount of tokens to holders at the given block number.
         Checks the resulting merkle tree and outputs the data required to update the distributor contract.
     `)
-    .argument("<chain_id>", "the token chain id", parseChainId)
+    .argument("<chain_id>", "the token chain id", parsePositiveInt)
     .argument("<token>", "the token address", parseAddress)
     .argument("<amount_in_wei>", "the amount of tokens to distribute", parsePositiveBigint)
     .argument("<block_number>", "the block number of the original snapshot", parsePositiveBigint)
     .argument("<snapshots>", "the number of retrospective snapshot to take", parsePositiveInt)
     .argument("<interval>", "the number of blocks between each retrospective snapshots", parsePositiveInt)
-    .action(async (...args: [SupportedChainId, `0x${string}`, bigint, bigint, number, number]) => {
+    .action(async (...args: [number, `0x${string}`, bigint, bigint, number, number]) => {
         try {
             if (!await newDistributionPrompt(...args)) {
                 throw new Error("terminated by user.")
@@ -135,17 +125,17 @@ distribution.command("new")
     })
 
 distribution.command("check")
-    .argument("<chain_id>", "the token chain id", parseChainId)
+    .argument("<chain_id>", "the token chain id", parsePositiveInt)
     .argument("<token>", "the token address", parseAddress)
     .argument("<block_number>", "the block number of the original snapshot", parsePositiveBigint)
-    .action((...args: [SupportedChainId, `0x${string}`, bigint]) => {
+    .action((...args: [number, `0x${string}`, bigint]) => {
         console.log("distribution:check", ...args)
     })
 
 distribution.command("data")
-    .argument("<chain_id>", "the token chain id", parseChainId)
+    .argument("<chain_id>", "the token chain id", parsePositiveInt)
     .argument("<token>", "the token address", parseAddress)
-    .action((...args: [SupportedChainId, `0x${string}`]) => {
+    .action((...args: [number, `0x${string}`]) => {
         console.log("distribution:data", ...args)
     })
 
@@ -156,13 +146,13 @@ allocation.command("new")
         Allocates the given amount of tokens to holders at the given block number.
         Checks the resulting merkle tree and outputs the data required to update the launchpad contract.
     `)
-    .argument("<chain_id>", "the token chain id", parseChainId)
+    .argument("<chain_id>", "the token chain id", parsePositiveInt)
     .argument("<launchpad>", "the launchpad address", parseAddress)
     .argument("<amount_in_wei>", "the amount of tokens to allocate", parsePositiveBigint)
     .argument("<block_number>", "the block number of the original snapshot", parsePositiveBigint)
     .argument("<snapshots>", "the number of retrospective snapshot to take", parsePositiveInt)
     .argument("<interval>", "the number of blocks between each retrospective snapshots", parsePositiveInt)
-    .action(async (...args: [SupportedChainId, `0x${string}`, bigint, bigint, number, number]) => {
+    .action(async (...args: [number, `0x${string}`, bigint, bigint, number, number]) => {
         try {
             if (!await newAllocationPrompt(...args)) {
                 throw new Error("terminated by user.")
@@ -178,17 +168,17 @@ allocation.command("new")
 
 
 allocation.command("check")
-    .argument("<chain_id>", "the token chain id", parseChainId)
+    .argument("<chain_id>", "the token chain id", parsePositiveInt)
     .argument("<launchpad>", "the launchpad address", parseAddress)
     .argument("<block_number>", "the block number of the original snapshot", parsePositiveBigint)
-    .action((...args: [SupportedChainId, `0x${string}`, bigint]) => {
+    .action((...args: [number, `0x${string}`, bigint]) => {
         console.log("allocation:check", ...args)
     })
 
 allocation.command("data")
-    .argument("<chain_id>", "the token chain id", parseChainId)
+    .argument("<chain_id>", "the token chain id", parsePositiveInt)
     .argument("<launchpad>", "the launchpad address", parseAddress)
-    .action((...args: [SupportedChainId, `0x${string}`]) => {
+    .action((...args: [number, `0x${string}`]) => {
         console.log("allocation:data", ...args)
     })
 

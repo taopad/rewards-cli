@@ -13,6 +13,8 @@ model distributions {
   chain_id             Int
   token                String                 @db.Char(42)
   block_number         BigInt
+  snapshots            Int                    @db.SmallInt
+  interval             Int
   total_shares         String                 @db.VarChar
   total_rewards        String                 @db.VarChar
   root                 String                 @db.Char(66)
@@ -27,7 +29,7 @@ model distributions_proofs {
   token         String        @db.Char(42)
   block_number  BigInt
   address       String        @db.Char(42)
-  balance       String        @db.VarChar
+  shares        String        @db.VarChar
   amount        String        @db.VarChar
   proof         String[]      @db.Char(66)
   distributions distributions @relation(fields: [chain_id, token, block_number], references: [chain_id, token, block_number], onDelete: NoAction, onUpdate: NoAction, map: "distributions_proofs_distributions_fk")
@@ -42,7 +44,6 @@ model whitelists {
   root              String              @db.Char(66)
   block_number      BigInt
   min_balance       String              @db.VarChar
-  total_rewards     String              @db.VarChar
   whitelists_proofs whitelists_proofs[]
 
   @@id([chain_id, launchpad])
@@ -54,7 +55,6 @@ model whitelists_proofs {
   address    String     @db.Char(42)
   proof      String[]   @db.Char(66)
   balance    String     @db.VarChar
-  rewards    String     @db.VarChar
   whitelists whitelists @relation(fields: [chain_id, launchpad], references: [chain_id, launchpad], onDelete: NoAction, onUpdate: NoAction, map: "whitelists_proofs_whitelists_fk")
 
   @@id([chain_id, launchpad, address])
@@ -85,4 +85,30 @@ model projects_presales {
 
   @@id([chain_id, address])
   @@index([project_id, chain_id, address], map: "projects_presales_project_id_chain_id_address_index")
+}
+
+model allocations {
+  chain_id           Int
+  launchpad          String               @db.Char(42)
+  block_number       BigInt
+  snapshots          Int                  @db.SmallInt
+  interval           Int
+  total_shares       String               @db.VarChar
+  total_allocations  String               @db.VarChar
+  root               String               @db.Char(66)
+  allocations_proofs allocations_proofs[]
+
+  @@id([chain_id, launchpad])
+}
+
+model allocations_proofs {
+  chain_id    Int
+  launchpad   String      @db.Char(42)
+  address     String      @db.Char(42)
+  shares      String      @db.VarChar
+  amount      String      @db.VarChar
+  proof       String[]    @db.Char(66)
+  allocations allocations @relation(fields: [chain_id, launchpad], references: [chain_id, launchpad], onDelete: NoAction, onUpdate: NoAction, map: "allocations_proofs_allocations_fkey")
+
+  @@id([chain_id, launchpad, address])
 }
