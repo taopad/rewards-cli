@@ -142,6 +142,7 @@ const getWhitelist = async (chainId: SupportedChainId, launchpad: `0x${string}`)
         root: result.root as `0x${string}`,
         blockNumber: result.block_number,
         minBalance: BigInt(result.min_balance),
+        totalRewards: BigInt(result.total_rewards),
         list: [],
     }
 }
@@ -157,17 +158,17 @@ const saveWhitelist = async (whitelist: Whitelist) => {
                 root,
                 block_number: whitelist.blockNumber,
                 min_balance: whitelist.minBalance.toString(),
-                total_rewards: "0",
+                total_rewards: whitelist.totalRewards.toString(),
             }
         }),
         prisma.whitelists_proofs.createMany({
-            data: list.map(({ address, proof, balance }) => ({
+            data: list.map(({ address, proof, balance, rewards }) => ({
                 chain_id: chainId,
                 launchpad: launchpad.toLowerCase(),
                 address: address.toLowerCase(),
                 proof,
                 balance: balance.toString(),
-                rewards: "0",
+                rewards: rewards.toString(),
             }))
         })
     ])

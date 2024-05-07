@@ -9,7 +9,8 @@ import { outputWhitelistData } from "./lib/view"
 import { SupportedChainId, Snapshot, WhitelistItem, isSupportedChainId } from "./types"
 
 type WhitelistTreeResult = {
-    root: `0x${string}`,
+    totalRewards: bigint
+    root: `0x${string}`
     list: WhitelistItem[]
 }
 
@@ -117,10 +118,11 @@ const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult
             address: address as `0x${string}`,
             proof: tree.getProof(i) as `0x${string}`[],
             balance: snapshot[address] ?? 0n,
+            rewards: 0n,
         })
     }
 
-    return { root: tree.root as `0x${string}`, list }
+    return { totalRewards: 0n, root: tree.root as `0x${string}`, list }
 }
 
 const whitelistNew = async () => {
@@ -149,10 +151,10 @@ const whitelistNew = async () => {
     }
 
     // compute the whitelist markle tree.
-    const { root, list } = await getWhitelistTree(snapshot)
+    const { totalRewards, root, list } = await getWhitelistTree(snapshot)
 
     // save the whitelist merkle tree.
-    await database.whitelists.save({ chainId, launchpad, root, blockNumber, minBalance, list })
+    await database.whitelists.save({ chainId, launchpad, root, blockNumber, minBalance, totalRewards, list })
 
     // output the whitelist data.
     await outputWhitelistData(chainId, launchpad)

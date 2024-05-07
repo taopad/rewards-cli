@@ -9,7 +9,8 @@
     "distribution:data": "npx ts-node ./src/distributionData.ts",
     "whitelist:new": "npx ts-node ./src/whitelistNew.ts",
     "whitelist:data": "npx ts-node ./src/whitelistData.ts",
-    "check": "npx ts-node ./src/check.ts"
+    "check": "npx ts-node ./src/check.ts",
+    "postinstall": "prisma generate"
   },
   "author": "",
   "license": "ISC",

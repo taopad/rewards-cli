@@ -29,6 +29,7 @@ export type Whitelist = {
     root: `0x${string}`
     blockNumber: bigint
     minBalance: bigint
+    totalRewards: bigint
     list: WhitelistItem[]
 }
 
@@ -36,6 +37,7 @@ export type WhitelistItem = {
     address: `0x${string}`
     proof: `0x${string}`[]
     balance: bigint
+    rewards: bigint
 }
 
 export const isSupportedChainId = (chainId: number): chainId is SupportedChainId => {
