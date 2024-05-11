@@ -64,6 +64,19 @@ const LaunchpadAbi = [
         "stateMutability": "view",
         "type": "function"
     },
+    {
+        "inputs": [],
+        "name": "token",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
 ] as const
 
 export const chains = [mainnet, arbitrum]
@@ -134,13 +147,23 @@ const getTokenInfo = async (chainId: SupportedChainId, token: `0x${string}`) => 
 }
 
 const getLaunchpadInfo = async (chainId: SupportedChainId, launchpad: `0x${string}`) => {
-    const name = await publicClients[chainId].readContract({
-        abi: LaunchpadAbi,
-        address: launchpad,
-        functionName: "name",
+    const [name, token] = await publicClients[chainId].multicall({
+        allowFailure: false,
+        contracts: [
+            {
+                abi: LaunchpadAbi,
+                address: launchpad,
+                functionName: "name",
+            },
+            {
+                abi: LaunchpadAbi,
+                address: launchpad,
+                functionName: "token",
+            },
+        ],
     })
 
-    return { name }
+    return { name, token }
 }
 
 export const blockchain = {

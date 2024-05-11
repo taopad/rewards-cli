@@ -20,9 +20,9 @@ Outputs the data required to update the distributor contract.
 
 ## Create a whitelist
 
-Queries the current snapshot from the graph and make a whitelist of tpad holders with the given min balance for the given launchpad. An optional block number can be given to snapshot a specific block. Outputs the data required to update the launchpad contract.
+Queries the current snapshot from the graph and make a whitelist of tpad holders for the given launchpad. The total allocations value is shared among all taopad holders, linearly. An optional block number can be given to snapshot a specific block. Outputs the data required to update the launchpad contract.
 
-`docker run --rm -it taopad:rewards whitelist:new chain_id launchpad_address min_tpad_balance_in_wei block_number?`
+`docker run --rm -it taopad:rewards whitelist:new chain_id launchpad_address total_allocations_in_wei block_number?`
 
 ## Get whitelist data
 

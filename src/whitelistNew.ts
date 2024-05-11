@@ -16,7 +16,7 @@ type WhitelistTreeResult = {
 
 const parseChainId = () => {
     if (process.argv.length < 3) {
-        throw new Error("chain id is required [chain_id, launchpad_address, min_balance, block_number?]")
+        throw new Error("chain id is required [chain_id, launchpad_address, total_allocations, block_number?]")
     }
 
     const chainId = parseInt(process.argv[2])
@@ -34,7 +34,7 @@ const parseChainId = () => {
 
 const parseLaunchpad = () => {
     if (process.argv.length < 4) {
-        throw new Error("launchpad_address is required [chain_id, launchpad_address, min_balance, block_number?]")
+        throw new Error("launchpad_address is required [chain_id, launchpad_address, total_allocations, block_number?]")
     }
 
     const launchpad = process.argv[3]
@@ -46,15 +46,15 @@ const parseLaunchpad = () => {
     return launchpad
 }
 
-const parseMinBalance = () => {
+const parseTotalAllocations = () => {
     if (process.argv.length < 5) {
-        throw new Error("min_balance is required [chain_id, launchpad_address, min_balance, block_number?]")
+        throw new Error("total_allocations is required [chain_id, launchpad_address, total_allocations, block_number?]")
     }
 
     try {
         return BigInt(process.argv[4])
     } catch (e: any) {
-        throw new Error("min_balance must be parsable as bigint")
+        throw new Error("total_allocations must be parsable as bigint")
     }
 }
 
@@ -84,16 +84,18 @@ const getValidBlockNumber = async (blockNumber: bigint | undefined) => {
     throw new Error("block number must be before last finalized block number")
 }
 
-const confirmParameters = async (chainId: SupportedChainId, launchpad: `0x${string}`, minBalance: bigint, blockNumber: bigint) => {
+const confirmParameters = async (chainId: SupportedChainId, launchpad: `0x${string}`, totalAllocations: bigint, blockNumber: bigint) => {
     const timestamp = Number(await blockchain.blockTimestamp(blockNumber) * 1000n)
     const blockchainName = blockchain.blockchainName(chainId)
 
     try {
-        const { name } = await blockchain.launchpadInfo(chainId, launchpad)
+        const launchpadInfo = await blockchain.launchpadInfo(chainId, launchpad)
+        const tokenInfo = await blockchain.tokenInfo(chainId, launchpadInfo.token)
 
         console.log(`Chain: ${blockchainName}`)
-        console.log(`Launchpad: ${name} (${launchpad})`)
-        console.log(`Min balance: ${formatUnits(minBalance, 18)} \$TPAD`)
+        console.log(`Launchpad: ${launchpadInfo.name} (${launchpad})`)
+        console.log(`Token: ${tokenInfo.name} (${launchpadInfo.token})`)
+        console.log(`Total allocations: ${formatUnits(totalAllocations, tokenInfo.decimals)} \$${tokenInfo.symbol}`)
         console.log(`Block number: ${blockNumber} (${(new Date(timestamp)).toUTCString()})`)
     } catch (e) {
         throw new Error(`address ${launchpad} on ${blockchainName} does not seem to be a launchpad contract address`)
@@ -106,34 +108,53 @@ const confirmParameters = async (chainId: SupportedChainId, launchpad: `0x${stri
     }
 }
 
-const getWhitelistTree = async (snapshot: Snapshot): Promise<WhitelistTreeResult> => {
+const roundFloor = (value: bigint, decimals: number) => {
+    const unit = 10n ** BigInt(decimals)
+
+    return (value / unit) * unit
+}
+
+const getWhitelistTree = async (snapshot: Snapshot, totalAllocations: bigint, decimals: number): Promise<WhitelistTreeResult> => {
+    let totalRewards = 0n
+    const totalShares = Object.values(snapshot).reduce((acc, current) => acc + current, 0n)
+
+    const allocations: Record<string, bigint> = {}
+
+    for (const [address, balance] of Object.entries(snapshot)) {
+        const allocation = roundFloor((balance * totalAllocations) / totalShares, decimals)
+
+        totalRewards += allocation
+
+        if (allocation > 0) {
+            allocations[address] = allocation
+        }
+    }
+
     const list: WhitelistItem[] = []
+    const tree = StandardMerkleTree.of(Object.entries(allocations), ["address", "uint256"])
 
-    const addresses = Object.keys(snapshot)
-
-    const tree = StandardMerkleTree.of(addresses.map(address => [address]), ["address"])
-
-    for (const [i, [address]] of tree.entries()) {
+    for (const [i, [address, allocation]] of tree.entries()) {
         list.push({
             address: address as `0x${string}`,
             proof: tree.getProof(i) as `0x${string}`[],
-            balance: snapshot[address] ?? 0n,
-            rewards: 0n,
+            balance: snapshot[address],
+            rewards: allocation,
         })
     }
 
-    return { totalRewards: 0n, root: tree.root as `0x${string}`, list }
+    return { totalRewards, root: tree.root as `0x${string}`, list }
 }
 
 const whitelistNew = async () => {
     // parse input.
     const chainId = parseChainId()
     const launchpad = parseLaunchpad()
-    const minBalance = parseMinBalance()
+    const totalAllocations = parseTotalAllocations()
     const blockNumber = await getValidBlockNumber(parseOptionalBlockNumber())
+    const minBalance = 0n
 
     // confirm the distribution.
-    await confirmParameters(chainId, launchpad, minBalance, blockNumber)
+    await confirmParameters(chainId, launchpad, totalAllocations, blockNumber)
 
     // ensure whitelist does not exist.
     const maybeWhitelist = await database.whitelists.get(chainId, launchpad)
@@ -150,8 +171,12 @@ const whitelistNew = async () => {
         throw new Error("empty snapshot")
     }
 
+    // get token decimals.
+    const { token } = await blockchain.launchpadInfo(chainId, launchpad)
+    const { decimals } = await blockchain.tokenInfo(chainId, token)
+
     // compute the whitelist markle tree.
-    const { totalRewards, root, list } = await getWhitelistTree(snapshot)
+    const { totalRewards, root, list } = await getWhitelistTree(snapshot, totalAllocations, decimals)
 
     // save the whitelist merkle tree.
     await database.whitelists.save({ chainId, launchpad, root, blockNumber, minBalance, totalRewards, list })
